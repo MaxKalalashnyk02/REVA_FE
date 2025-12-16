@@ -1,4 +1,42 @@
-# React + Vite
+# REVA_FE
+
+React + Vite проект з HMR та ESLint правилами.
+
+## Як запустити проект
+
+### Встановлення залежностей
+
+```bash
+npm install
+```
+
+### Запуск dev сервера
+
+```bash
+npm run dev
+```
+
+Проект буде доступний за адресою `http://localhost:5173` (або інший порт, якщо 5173 зайнятий).
+
+### Збірка для продакшну
+
+```bash
+npm run build
+```
+
+### Перегляд зібраного проекту
+
+```bash
+npm run preview
+```
+
+### Перевірка коду (lint)
+
+```bash
+npm run lint
+```
+
+## Про шаблон
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
