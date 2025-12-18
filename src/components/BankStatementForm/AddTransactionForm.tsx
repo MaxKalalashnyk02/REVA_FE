@@ -9,12 +9,22 @@ interface AddTransactionFormProps {
   onChange: (transaction: Transaction) => void;
   onAdd: () => void;
   currency: 'EUR' | 'USD';
+  openingBalance: string;
+  lastTransactionBalance: string;
 }
 
-export function AddTransactionForm({ transaction, onChange, onAdd, currency }: AddTransactionFormProps) {
+export function AddTransactionForm({ transaction, onChange, onAdd, currency, openingBalance, lastTransactionBalance }: AddTransactionFormProps) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
   const currencySymbol = currency === 'USD' ? '$' : '€';
+  
+  const previousBalance = lastTransactionBalance 
+    ? parseFloat(lastTransactionBalance) || 0
+    : parseFloat(openingBalance) || 0;
+  
+  const moneyIn = parseFloat(transaction.moneyIn) || 0;
+  const moneyOut = parseFloat(transaction.moneyOut) || 0;
+  const previewBalance = previousBalance + moneyIn - moneyOut;
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     onChange({ ...transaction, [e.target.name]: e.target.value });
@@ -86,15 +96,14 @@ export function AddTransactionForm({ transaction, onChange, onAdd, currency }: A
           onChange={handleChange}
           placeholder={PLACEHOLDERS.transactionMoneyIn}
         />
-        <InputSmall
-          label={`Баланс (${currencySymbol}):`}
-          type="number"
-          step="0.01"
-          name="balance"
-          value={transaction.balance}
-          onChange={handleChange}
-          placeholder={PLACEHOLDERS.transactionBalance}
-        />
+        <div>
+          <label className="block text-slate-400 text-xs font-medium mb-1">
+            Баланс ({currencySymbol}):
+          </label>
+          <div className="px-2 py-2 bg-slate-800 border border-slate-700 rounded text-emerald-400 text-sm font-medium">
+            {previewBalance.toFixed(2)}
+          </div>
+        </div>
       </div>
 
       <Button variant="success" onClick={handleAdd} className="mt-3">

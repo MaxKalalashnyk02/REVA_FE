@@ -1,4 +1,4 @@
-import { useState, type ChangeEvent } from 'react';
+import { useState, useRef, type ChangeEvent } from 'react';
 import { Input, DatePicker, Section, Button } from '../ui';
 import { TransactionList } from './TransactionList';
 import { AddTransactionForm } from './AddTransactionForm';
@@ -6,6 +6,7 @@ import { INITIAL_FORM_DATA, INITIAL_TRANSACTION, PLACEHOLDERS } from './constant
 import { generatePdfFromDocument, downloadBlob } from '../../api/pdfService';
 import { saveStatementForCurrentUser } from '../../api/documentService';
 import { getTodayFormatted, formatDateLong } from '../../utils/date';
+import { downloadTransactionsTemplate, parseTransactionsFromExcel, exportTransactionsToExcel } from '../../utils/excel';
 import type { FormData, Transaction } from '../../types';
 
 export default function BankStatementForm() {
@@ -18,6 +19,7 @@ export default function BankStatementForm() {
   });
   const [newTransaction, setNewTransaction] = useState<Transaction>(INITIAL_TRANSACTION);
   const [isLoading, setIsLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const updateField = (e: ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -40,9 +42,22 @@ export default function BankStatementForm() {
   const addTransaction = () => {
     if (!newTransaction.date || !newTransaction.description) return;
     
+    const previousBalance = formData.transactions.length > 0
+      ? parseFloat(formData.transactions[formData.transactions.length - 1].balance) || 0
+      : parseFloat(formData.openingBalance) || 0;
+    
+    const moneyIn = parseFloat(newTransaction.moneyIn) || 0;
+    const moneyOut = parseFloat(newTransaction.moneyOut) || 0;
+    const calculatedBalance = previousBalance + moneyIn - moneyOut;
+    
+    const transactionWithBalance = {
+      ...newTransaction,
+      balance: calculatedBalance.toFixed(2)
+    };
+    
     setFormData(prev => ({
       ...prev,
-      transactions: [...prev.transactions, newTransaction]
+      transactions: [...prev.transactions, transactionWithBalance]
     }));
     setNewTransaction(INITIAL_TRANSACTION);
   };
@@ -61,11 +76,41 @@ export default function BankStatementForm() {
 
   const currencySymbol = formData.currency === 'USD' ? '$' : '€';
 
+  const calculatedClosingBalance = (
+    (parseFloat(formData.openingBalance) || 0) +
+    (parseFloat(formData.moneyIn) || 0) -
+    (parseFloat(formData.moneyOut) || 0)
+  ).toFixed(2);
+
+  const handleImportExcel = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const transactions = await parseTransactionsFromExcel(file);
+      setFormData(prev => ({
+        ...prev,
+        transactions: [...prev.transactions, ...transactions]
+      }));
+      alert(`Успішно імпортовано ${transactions.length} транзакцій!`);
+    } catch (error) {
+      alert(error instanceof Error ? error.message : 'Помилка імпорту');
+    }
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
   const handleGeneratePdf = async () => {
     setIsLoading(true);
     
     try {
-      const documentId = await saveStatementForCurrentUser(formData, periodStart, periodEnd);
+      const updatedFormData = {
+        ...formData,
+        closingBalance: calculatedClosingBalance
+      };
+      const documentId = await saveStatementForCurrentUser(updatedFormData, periodStart, periodEnd);
       console.log('Document saved with ID:', documentId);
 
       if (!documentId) {
@@ -166,17 +211,62 @@ export default function BankStatementForm() {
           <Input label={`Початковий баланс (${currencySymbol}):`} type="number" step="0.01" name="openingBalance" value={formData.openingBalance} onChange={updateField} placeholder={PLACEHOLDERS.openingBalance} />
           <Input label={`Витрачено (${currencySymbol}):`} type="number" step="0.01" name="moneyOut" value={formData.moneyOut} onChange={updateField} placeholder={PLACEHOLDERS.moneyOut} />
           <Input label={`Надійшло (${currencySymbol}):`} type="number" step="0.01" name="moneyIn" value={formData.moneyIn} onChange={updateField} placeholder={PLACEHOLDERS.moneyIn} />
-          <Input label={`Кінцевий баланс (${currencySymbol}):`} type="number" step="0.01" name="closingBalance" value={formData.closingBalance} onChange={updateField} placeholder={PLACEHOLDERS.closingBalance} />
+          <div>
+            <label className="block text-slate-400 text-sm font-medium mb-1.5">
+              Кінцевий баланс ({currencySymbol}):
+            </label>
+            <div className="px-3 py-1 bg-slate-800 border border-slate-700 rounded-md text-emerald-400 font-semibold text-lg">
+              {calculatedClosingBalance}
+            </div>
+          </div>
         </div>
       </Section>
 
       <Section title="Транзакції">
+        <div className="mb-4 flex flex-wrap gap-2">
+          <Button
+            variant="primary"
+            onClick={downloadTransactionsTemplate}
+            className="text-sm"
+          >
+            Скачати шаблон Excel
+          </Button>
+          <Button
+            variant="primary"
+            onClick={() => fileInputRef.current?.click()}
+            className="text-sm"
+          >
+            Імпортувати з Excel
+          </Button>
+          {formData.transactions.length > 0 && (
+            <Button
+              variant="primary"
+              onClick={() => exportTransactionsToExcel(formData.transactions)}
+              className="text-sm"
+            >
+              Експортувати в Excel
+            </Button>
+          )}
+        </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".xlsx,.xls"
+          onChange={handleImportExcel}
+          className="hidden"
+        />
         <TransactionList transactions={formData.transactions} onRemove={removeTransaction} />
         <AddTransactionForm
           transaction={newTransaction}
           onChange={setNewTransaction}
           onAdd={addTransaction}
           currency={formData.currency}
+          openingBalance={formData.openingBalance}
+          lastTransactionBalance={
+            formData.transactions.length > 0
+              ? formData.transactions[formData.transactions.length - 1].balance
+              : ''
+          }
         />
       </Section>
 
