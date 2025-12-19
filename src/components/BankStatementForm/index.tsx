@@ -349,7 +349,7 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
             </select>
           </label>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <Input label={`Початковий баланс (${currencySymbol}):`} type="number" step="0.01" name="openingBalance" value={formData.openingBalance} onChange={updateField} placeholder={PLACEHOLDERS.openingBalance} />
           <Input label={`Витрачено (${currencySymbol}):`} type="number" step="0.01" name="moneyOut" value={formData.moneyOut} onChange={updateField} placeholder={PLACEHOLDERS.moneyOut} />
           <Input label={`Надійшло (${currencySymbol}):`} type="number" step="0.01" name="moneyIn" value={formData.moneyIn} onChange={updateField} placeholder={PLACEHOLDERS.moneyIn} />
@@ -361,6 +361,16 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
               {calculatedClosingBalance}
             </div>
           </div>
+          <Input 
+            label="Термін зберігання (днів):" 
+            type="number" 
+            min="1" 
+            max="31" 
+            name="storageDays" 
+            value={formData.storageDays} 
+            onChange={updateField} 
+            placeholder="7" 
+          />
         </div>
       </Section>
 
@@ -415,16 +425,6 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
       <Section title="Контактна інформація">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input label="Контактний телефон:" name="contactPhone" value={formData.contactPhone} onChange={updateField} placeholder={PLACEHOLDERS.contactPhone} />
-          <Input 
-            label="Термін зберігання (днів):" 
-            type="number" 
-            min="1" 
-            max="31" 
-            name="storageDays" 
-            value={formData.storageDays} 
-            onChange={updateField} 
-            placeholder="7" 
-          />
         </div>
       </Section>
 
