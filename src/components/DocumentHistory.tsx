@@ -95,7 +95,7 @@ export function DocumentHistory({ onEdit, onBack }: DocumentHistoryProps) {
       <div className="flex items-center gap-3">
         <button
           onClick={onBack}
-          className="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-600 hover:bg-emerald-700 transition-colors"
+          className="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-600 hover:bg-emerald-700 transition-colors cursor-pointer"
           aria-label="Назад"
         >
           <svg
