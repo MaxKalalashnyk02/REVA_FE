@@ -26,6 +26,7 @@ export interface FormData {
   transactions: Transaction[];
   contactPhone: string;
   currency: 'EUR' | 'USD';
+  storageDays: string;
 }
 
 export interface TransactionPayload {

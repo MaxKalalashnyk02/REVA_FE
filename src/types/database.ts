@@ -60,6 +60,7 @@ export interface Database {
           pdf_url: string | null;
           created_at: string;
           expires_at: string | null;
+          storage_days: number | null;
         };
         Insert: {
           id?: string;
@@ -75,6 +76,7 @@ export interface Database {
           pdf_url?: string | null;
           created_at?: string;
           expires_at?: string | null;
+          storage_days?: number | null;
         };
         Update: {
           id?: string;
@@ -90,6 +92,7 @@ export interface Database {
           pdf_url?: string | null;
           created_at?: string;
           expires_at?: string | null;
+          storage_days?: number | null;
         };
       };
       transactions: {

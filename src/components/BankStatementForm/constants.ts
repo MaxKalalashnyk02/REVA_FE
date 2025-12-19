@@ -17,7 +17,8 @@ export const INITIAL_FORM_DATA: FormData = {
   closingBalance: '',
   transactions: [],
   contactPhone: '',
-  currency: 'EUR'
+  currency: 'EUR',
+  storageDays: '7'
 };
 
 export const INITIAL_TRANSACTION: Transaction = {

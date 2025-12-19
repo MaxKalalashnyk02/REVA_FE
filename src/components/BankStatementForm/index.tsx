@@ -1,15 +1,20 @@
-import { useState, useRef, type ChangeEvent } from 'react';
-import { Input, DatePicker, Section, Button } from '../ui';
+import { useState, useRef, useEffect, type ChangeEvent } from 'react';
+import { Input, DatePicker, Section, Button, Loader } from '../ui';
 import { TransactionList } from './TransactionList';
 import { AddTransactionForm } from './AddTransactionForm';
 import { INITIAL_FORM_DATA, INITIAL_TRANSACTION, PLACEHOLDERS } from './constants';
 import { generatePdfFromDocument, downloadBlob } from '../../api/pdfService';
-import { saveStatementForCurrentUser } from '../../api/documentService';
+import { saveStatementForCurrentUser, getDocumentById } from '../../api/documentService';
 import { getTodayFormatted, formatDateLong } from '../../utils/date';
 import { downloadTransactionsTemplate, parseTransactionsFromExcel, exportTransactionsToExcel } from '../../utils/excel';
 import type { FormData, Transaction } from '../../types';
+import { supabase } from '../../lib/supabase';
 
-export default function BankStatementForm() {
+interface BankStatementFormProps {
+  documentId?: string | null;
+}
+
+export default function BankStatementForm({ documentId }: BankStatementFormProps) {
   const [periodStart, setPeriodStart] = useState<Date | null>(null);
   const [periodEnd, setPeriodEnd] = useState<Date | null>(null);
   
@@ -19,7 +24,78 @@ export default function BankStatementForm() {
   });
   const [newTransaction, setNewTransaction] = useState<Transaction>(INITIAL_TRANSACTION);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingDocument, setIsLoadingDocument] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (documentId) {
+      loadDocument(documentId);
+    } else {
+      setFormData({
+        ...INITIAL_FORM_DATA,
+        statementDate: getTodayFormatted(),
+      });
+      setPeriodStart(null);
+      setPeriodEnd(null);
+    }
+  }, [documentId]);
+
+  const loadDocument = async (docId: string) => {
+    setIsLoadingDocument(true);
+    try {
+      const doc = await getDocumentById(docId);
+      if (!doc) {
+        alert('Документ не знайдено');
+        return;
+      }
+
+      const { data: transactions } = await supabase
+        .from('transactions')
+        .select('*')
+        .eq('document_id', docId)
+        .order('created_at', { ascending: true });
+
+      const docData = doc as any;
+      const company = docData.companies || {};
+
+      setFormData({
+        accountHolderName: company.name || '',
+        address: company.address || '',
+        postalCode: company.postal_code || '',
+        city: company.city || '',
+        country: company.country || '',
+        iban: company.iban || '',
+        bic: company.bic || '',
+        statementDate: getTodayFormatted(),
+        periodStart: formatDateLong(new Date(doc.period_start)),
+        periodEnd: formatDateLong(new Date(doc.period_end)),
+        openingBalance: doc.opening_balance?.toString() || '',
+        moneyOut: doc.money_out?.toString() || '',
+        moneyIn: doc.money_in?.toString() || '',
+        closingBalance: doc.closing_balance?.toString() || '',
+        contactPhone: company.contact_phone || '',
+        currency: 'EUR',
+        storageDays: doc.storage_days?.toString() || '7',
+        transactions: ((transactions || []) as any[]).map((t: any) => ({
+          date: formatDateLong(new Date(t.date)),
+          description: t.description || '',
+          moneyOut: t.money_out?.toString() || '',
+          moneyIn: t.money_in?.toString() || '',
+          balance: t.balance?.toString() || '',
+          reference: t.reference || '',
+          recipient: t.recipient || '',
+        })),
+      });
+
+      setPeriodStart(new Date(doc.period_start));
+      setPeriodEnd(new Date(doc.period_end));
+    } catch (error) {
+      console.error('Error loading document:', error);
+      alert('Помилка завантаження документа');
+    } finally {
+      setIsLoadingDocument(false);
+    }
+  };
 
   const updateField = (e: ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -39,33 +115,87 @@ export default function BankStatementForm() {
     }
   };
 
+  const parseDateFromString = (dateStr: string): Date | null => {
+    try {
+      const parts = dateStr.trim().split(' ');
+      if (parts.length === 3) {
+        const day = parseInt(parts[0]);
+        const monthMap: { [key: string]: number } = {
+          'Jan': 0, 'Feb': 1, 'Mar': 2, 'Apr': 3, 'May': 4, 'Jun': 5,
+          'Jul': 6, 'Aug': 7, 'Sep': 8, 'Oct': 9, 'Nov': 10, 'Dec': 11
+        };
+        const month = monthMap[parts[1]];
+        const year = parseInt(parts[2]);
+        if (!isNaN(day) && month !== undefined && !isNaN(year)) {
+          return new Date(year, month, day);
+        }
+      }
+      return new Date(dateStr);
+    } catch {
+      return null;
+    }
+  };
+
+  const updatePeriodDatesFromTransactions = (transactions: Transaction[]) => {
+    if (transactions.length === 0) return;
+
+    const dates = transactions
+      .map(t => parseDateFromString(t.date))
+      .filter((d): d is Date => d !== null && !isNaN(d.getTime()))
+      .sort((a, b) => a.getTime() - b.getTime());
+
+    if (dates.length > 0) {
+      const firstDate = dates[0];
+      const lastDate = dates[dates.length - 1];
+      
+      setPeriodStart(firstDate);
+      setPeriodEnd(lastDate);
+      setFormData(prev => ({
+        ...prev,
+        periodStart: formatDateLong(firstDate),
+        periodEnd: formatDateLong(lastDate)
+      }));
+    }
+  };
+
   const addTransaction = () => {
-    if (!newTransaction.date || !newTransaction.description) return;
-    
-    const previousBalance = formData.transactions.length > 0
+    if (!newTransaction.date || !newTransaction.description) {
+      alert('Будь ласка, заповніть дату та опис');
+      return;
+    }
+
+    const prevBalance = formData.transactions.length > 0
       ? parseFloat(formData.transactions[formData.transactions.length - 1].balance) || 0
       : parseFloat(formData.openingBalance) || 0;
-    
+
     const moneyIn = parseFloat(newTransaction.moneyIn) || 0;
     const moneyOut = parseFloat(newTransaction.moneyOut) || 0;
-    const calculatedBalance = previousBalance + moneyIn - moneyOut;
-    
+    const calculatedBalance = (prevBalance + moneyIn - moneyOut).toFixed(2);
+
     const transactionWithBalance = {
       ...newTransaction,
-      balance: calculatedBalance.toFixed(2)
+      balance: calculatedBalance
     };
+
+    const updatedTransactions = [...formData.transactions, transactionWithBalance];
     
+    updatePeriodDatesFromTransactions(updatedTransactions);
+
     setFormData(prev => ({
       ...prev,
-      transactions: [...prev.transactions, transactionWithBalance]
+      transactions: updatedTransactions
     }));
     setNewTransaction(INITIAL_TRANSACTION);
   };
 
   const removeTransaction = (index: number) => {
+    const updatedTransactions = formData.transactions.filter((_, i) => i !== index);
+    
+    updatePeriodDatesFromTransactions(updatedTransactions);
+    
     setFormData(prev => ({
       ...prev,
-      transactions: prev.transactions.filter((_, i) => i !== index)
+      transactions: updatedTransactions
     }));
   };
 
@@ -88,9 +218,13 @@ export default function BankStatementForm() {
 
     try {
       const transactions = await parseTransactionsFromExcel(file);
+      const updatedTransactions = [...formData.transactions, ...transactions];
+      
+      updatePeriodDatesFromTransactions(updatedTransactions);
+      
       setFormData(prev => ({
         ...prev,
-        transactions: [...prev.transactions, ...transactions]
+        transactions: updatedTransactions
       }));
       alert(`Успішно імпортовано ${transactions.length} транзакцій!`);
     } catch (error) {
@@ -141,6 +275,14 @@ export default function BankStatementForm() {
       setIsLoading(false);
     }
   };
+
+  if (isLoadingDocument) {
+    return (
+      <div className="w-full flex items-center justify-center min-h-[400px]">
+        <Loader text="Завантаження документа..." />
+      </div>
+    );
+  }
 
   return (
     <div className="w-full bg-slate-900 rounded-xl p-4 md:p-6 border border-slate-800">
@@ -273,6 +415,16 @@ export default function BankStatementForm() {
       <Section title="Контактна інформація">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input label="Контактний телефон:" name="contactPhone" value={formData.contactPhone} onChange={updateField} placeholder={PLACEHOLDERS.contactPhone} />
+          <Input 
+            label="Термін зберігання (днів):" 
+            type="number" 
+            min="1" 
+            max="31" 
+            name="storageDays" 
+            value={formData.storageDays} 
+            onChange={updateField} 
+            placeholder="7" 
+          />
         </div>
       </Section>
 
@@ -284,11 +436,11 @@ export default function BankStatementForm() {
       >
         {isLoading ? (
           <span className="inline-flex items-center gap-1">
-            Генерується
+            {documentId ? 'Оновлюється' : 'Генерується'}
             <span className="loading-dots"></span>
           </span>
         ) : (
-          'Згенерувати PDF'
+          documentId ? 'Оновити документ' : 'Згенерувати PDF'
         )}
       </Button>
     </div>

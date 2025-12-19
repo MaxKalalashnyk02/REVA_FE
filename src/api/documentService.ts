@@ -85,6 +85,10 @@ export async function saveStatementForCurrentUser(
     ? periodEndDate.toISOString().slice(0, 10)
     : parseDateForDb(formData.periodEnd) ?? new Date().toISOString().slice(0, 10);
 
+  const storageDays = parseInt(formData.storageDays) || 7;
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + storageDays);
+
   const { data: document, error: documentError } =
     await (supabase as any)
       .from('documents')
@@ -99,7 +103,8 @@ export async function saveStatementForCurrentUser(
         money_in: parseNumber(formData.moneyIn),
         money_out: parseNumber(formData.moneyOut),
         pdf_url: null,
-        expires_at: null,
+        storage_days: storageDays,
+        expires_at: expiresAt.toISOString(),
       })
       .select('id')
       .single();
