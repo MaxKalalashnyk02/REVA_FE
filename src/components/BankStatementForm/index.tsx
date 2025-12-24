@@ -164,6 +164,20 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
       return;
     }
 
+    if (periodStart && periodEnd) {
+      const transactionDate = parseDateFromString(newTransaction.date);
+      if (transactionDate && !isNaN(transactionDate.getTime())) {
+        const startTime = periodStart.getTime();
+        const endTime = periodEnd.getTime();
+        const txTime = transactionDate.getTime();
+        
+        if (txTime < startTime || txTime > endTime) {
+          alert(`Транзакція з датою ${newTransaction.date} не входить в обраний період (${formData.periodStart} - ${formData.periodEnd})`);
+          return;
+        }
+      }
+    }
+
     const prevBalance = formData.transactions.length > 0
       ? parseFloat(formData.transactions[formData.transactions.length - 1].balance) || 0
       : parseFloat(formData.openingBalance) || 0;
@@ -218,15 +232,46 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
 
     try {
       const transactions = await parseTransactionsFromExcel(file);
-      const updatedTransactions = [...formData.transactions, ...transactions];
+      let transactionsToImport = transactions;
+      let excludedCount = 0;
+
+      if (periodStart && periodEnd) {
+        const startTime = periodStart.getTime();
+        const endTime = periodEnd.getTime();
+        
+        transactionsToImport = transactions.filter(transaction => {
+          const transactionDate = parseDateFromString(transaction.date);
+          if (!transactionDate || isNaN(transactionDate.getTime())) {
+            return true;
+          }
+          
+          const txTime = transactionDate.getTime();
+          const isInRange = txTime >= startTime && txTime <= endTime;
+          
+          if (!isInRange) {
+            excludedCount++;
+          }
+          
+          return isInRange;
+        });
+      }
+
+      const updatedTransactions = [...formData.transactions, ...transactionsToImport];
       
-      updatePeriodDatesFromTransactions(updatedTransactions);
+      if (!periodStart || !periodEnd) {
+        updatePeriodDatesFromTransactions(updatedTransactions);
+      }
       
       setFormData(prev => ({
         ...prev,
         transactions: updatedTransactions
       }));
-      alert(`Успішно імпортовано ${transactions.length} транзакцій!`);
+      
+      let message = `Успішно імпортовано ${transactionsToImport.length} транзакцій!`;
+      if (excludedCount > 0) {
+        message += `\n\n${excludedCount} транзакцій було виключено, оскільки вони не входять в обраний період (${formData.periodStart} - ${formData.periodEnd})`;
+      }
+      alert(message);
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Помилка імпорту');
     }
