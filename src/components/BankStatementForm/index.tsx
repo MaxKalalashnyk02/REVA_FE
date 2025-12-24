@@ -237,11 +237,34 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
   };
 
   const handleGeneratePdf = async () => {
+    if (!formData.contactPhone || formData.contactPhone.trim() === '') {
+      alert('Будь ласка, заповніть контактний телефон');
+      return;
+    }
+
     setIsLoading(true);
     
     try {
+      let filteredTransactions = formData.transactions;
+
+      if (periodStart && periodEnd) {
+        filteredTransactions = formData.transactions.filter(transaction => {
+          const transactionDate = parseDateFromString(transaction.date);
+          if (!transactionDate || isNaN(transactionDate.getTime())) {
+            return true;
+          }
+          
+          const startTime = periodStart.getTime();
+          const endTime = periodEnd.getTime();
+          const txTime = transactionDate.getTime();
+          
+          return txTime >= startTime && txTime <= endTime;
+        });
+      }
+
       const updatedFormData = {
         ...formData,
+        transactions: filteredTransactions,
         closingBalance: calculatedClosingBalance
       };
       const documentId = await saveStatementForCurrentUser(updatedFormData, periodStart, periodEnd);
@@ -306,35 +329,6 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
         </div>
       </Section>
 
-      <Section title="Період виписки">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <p className="text-slate-400 text-sm font-medium mb-1.5">Дата генерації:</p>
-            <p className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-slate-200">
-              {formData.statementDate}
-            </p>
-            <p className="text-slate-500 text-xs mt-1">Автоматично — сьогодні</p>
-          </div>
-          <DatePicker 
-            label="Початок періоду:" 
-            selected={periodStart}
-            onChange={handlePeriodStartChange}
-            placeholderText="Оберіть дату..."
-          />
-          <DatePicker 
-            label="Кінець періоду:" 
-            selected={periodEnd}
-            onChange={handlePeriodEndChange}
-            placeholderText="Оберіть дату..."
-          />
-        </div>
-        {(formData.periodStart || formData.periodEnd) && (
-          <p className="text-slate-500 text-xs mt-3">
-            Період: <span className="text-slate-300">{formData.periodStart || '—'}</span> — <span className="text-slate-300">{formData.periodEnd || '—'}</span>
-          </p>
-        )}
-      </Section>
-
       <Section title="Баланс">
         <div className="flex justify-end mb-2">
           <label className="text-slate-300 text-sm flex items-center gap-2">
@@ -372,6 +366,35 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
             placeholder="7" 
           />
         </div>
+      </Section>
+
+      <Section title="Період транзакцій">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <p className="text-slate-400 text-sm font-medium mb-1.5">Дата генерації:</p>
+            <p className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-slate-200">
+              {formData.statementDate}
+            </p>
+            <p className="text-slate-500 text-xs mt-1">Автоматично — сьогодні</p>
+          </div>
+          <DatePicker 
+            label="Початок періоду:" 
+            selected={periodStart}
+            onChange={handlePeriodStartChange}
+            placeholderText="Оберіть дату..."
+          />
+          <DatePicker 
+            label="Кінець періоду:" 
+            selected={periodEnd}
+            onChange={handlePeriodEndChange}
+            placeholderText="Оберіть дату..."
+          />
+        </div>
+        {(formData.periodStart || formData.periodEnd) && (
+          <p className="text-slate-500 text-xs mt-3">
+            Період: <span className="text-slate-300">{formData.periodStart || '—'}</span> — <span className="text-slate-300">{formData.periodEnd || '—'}</span>
+          </p>
+        )}
       </Section>
 
       <Section title="Транзакції">
@@ -424,7 +447,7 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
 
       <Section title="Контактна інформація">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Input label="Контактний телефон:" name="contactPhone" value={formData.contactPhone} onChange={updateField} placeholder={PLACEHOLDERS.contactPhone} />
+          <Input label="Контактний телефон:" name="contactPhone" value={formData.contactPhone} onChange={updateField} placeholder={PLACEHOLDERS.contactPhone} required />
         </div>
       </Section>
 
