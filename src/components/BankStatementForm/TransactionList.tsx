@@ -5,10 +5,31 @@ interface TransactionListProps {
   transactions: Transaction[];
   onRemove: (index: number) => void;
   currency?: 'EUR' | 'USD';
+  periodStart?: Date | null;
+  periodEnd?: Date | null;
+  parseDateFromString?: (dateStr: string) => Date | null;
 }
 
-export function TransactionList({ transactions, onRemove, currency = 'EUR' }: TransactionListProps) {
+export function TransactionList({ transactions, onRemove, currency = 'EUR', periodStart, periodEnd, parseDateFromString }: TransactionListProps) {
   const currencySymbol = currency === 'USD' ? '$' : '€';
+  
+  const isTransactionInRange = (transaction: Transaction): boolean => {
+    if (!periodStart || !periodEnd || !parseDateFromString) {
+      return true;
+    }
+    
+    const transactionDate = parseDateFromString(transaction.date);
+    if (!transactionDate || isNaN(transactionDate.getTime())) {
+      return true;
+    }
+    
+    const startTime = periodStart.getTime();
+    const endTime = periodEnd.getTime();
+    const txTime = transactionDate.getTime();
+    
+    return txTime >= startTime && txTime <= endTime;
+  };
+  
   if (!transactions.length) {
     return (
       <p className="text-slate-500 text-sm py-4 text-center">
@@ -19,11 +40,15 @@ export function TransactionList({ transactions, onRemove, currency = 'EUR' }: Tr
 
   return (
     <div className="space-y-2">
-      {transactions.map((tx, index) => (
-        <div
-          key={index}
-          className="grid grid-cols-1 md:grid-cols-6 gap-2 md:gap-4 p-3 bg-slate-900 rounded-md border border-slate-700 items-center"
-        >
+      {transactions.map((tx, index) => {
+        const inRange = isTransactionInRange(tx);
+        const borderClass = inRange ? 'border-slate-700' : 'border-red-500';
+        
+        return (
+          <div
+            key={index}
+            className={`grid grid-cols-1 md:grid-cols-6 gap-2 md:gap-4 p-3 bg-slate-900 rounded-md border ${borderClass} items-center`}
+          >
           <span className="text-slate-300 text-sm">{tx.date}</span>
           <div className="md:col-span-2">
             <div className="text-slate-300 text-sm">{tx.description}</div>
@@ -47,7 +72,8 @@ export function TransactionList({ transactions, onRemove, currency = 'EUR' }: Tr
             </Button>
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

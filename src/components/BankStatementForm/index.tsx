@@ -164,20 +164,6 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
       return;
     }
 
-    if (periodStart && periodEnd) {
-      const transactionDate = parseDateFromString(newTransaction.date);
-      if (transactionDate && !isNaN(transactionDate.getTime())) {
-        const startTime = periodStart.getTime();
-        const endTime = periodEnd.getTime();
-        const txTime = transactionDate.getTime();
-        
-        if (txTime < startTime || txTime > endTime) {
-          alert(`Транзакція з датою ${newTransaction.date} не входить в обраний період (${formData.periodStart} - ${formData.periodEnd})`);
-          return;
-        }
-      }
-    }
-
     const prevBalance = formData.transactions.length > 0
       ? parseFloat(formData.transactions[formData.transactions.length - 1].balance) || 0
       : parseFloat(formData.openingBalance) || 0;
@@ -205,8 +191,6 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
   const removeTransaction = (index: number) => {
     const updatedTransactions = formData.transactions.filter((_, i) => i !== index);
     
-    updatePeriodDatesFromTransactions(updatedTransactions);
-    
     setFormData(prev => ({
       ...prev,
       transactions: updatedTransactions
@@ -226,37 +210,10 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
     (parseFloat(formData.moneyOut) || 0)
   ).toFixed(2);
 
-  const handleImportExcel = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const processExcelFile = async (file: File) => {
     try {
       const transactions = await parseTransactionsFromExcel(file);
-      let transactionsToImport = transactions;
-      let excludedCount = 0;
-
-      if (periodStart && periodEnd) {
-        const startTime = periodStart.getTime();
-        const endTime = periodEnd.getTime();
-        
-        transactionsToImport = transactions.filter(transaction => {
-          const transactionDate = parseDateFromString(transaction.date);
-          if (!transactionDate || isNaN(transactionDate.getTime())) {
-            return true;
-          }
-          
-          const txTime = transactionDate.getTime();
-          const isInRange = txTime >= startTime && txTime <= endTime;
-          
-          if (!isInRange) {
-            excludedCount++;
-          }
-          
-          return isInRange;
-        });
-      }
-
-      const updatedTransactions = [...formData.transactions, ...transactionsToImport];
+      const updatedTransactions = [...formData.transactions, ...transactions];
       
       if (!periodStart || !periodEnd) {
         updatePeriodDatesFromTransactions(updatedTransactions);
@@ -266,19 +223,41 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
         ...prev,
         transactions: updatedTransactions
       }));
-      
-      let message = `Успішно імпортовано ${transactionsToImport.length} транзакцій!`;
-      if (excludedCount > 0) {
-        message += `\n\n${excludedCount} транзакцій було виключено, оскільки вони не входять в обраний період (${formData.periodStart} - ${formData.periodEnd})`;
-      }
-      alert(message);
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Помилка імпорту');
     }
+  };
+
+  const handleImportExcel = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    await processExcelFile(file);
 
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const files = e.dataTransfer.files;
+    if (files.length === 0) return;
+    
+    const file = files[0];
+    if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
+      alert('Будь ласка, завантажте файл Excel (.xlsx або .xls)');
+      return;
+    }
+    
+    await processExcelFile(file);
   };
 
   const handleGeneratePdf = async () => {
@@ -475,7 +454,24 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
           onChange={handleImportExcel}
           className="hidden"
         />
-        <TransactionList transactions={formData.transactions} onRemove={removeTransaction} />
+        <div
+          onDragOver={handleDragOver}
+          onDrop={handleDrop}
+          className="border-2 border-dashed border-slate-700 rounded-lg p-4 mb-4 transition-colors hover:border-sky-500 hover:bg-slate-800/50"
+        >
+          <p className="text-slate-400 text-sm text-center">
+            Перетягніть Excel файл сюди або використайте кнопку "Імпортувати з Excel"
+          </p>
+        </div>
+        <TransactionList 
+          key={`${periodStart?.getTime()}-${periodEnd?.getTime()}`}
+          transactions={formData.transactions} 
+          onRemove={removeTransaction}
+          currency={formData.currency}
+          periodStart={periodStart}
+          periodEnd={periodEnd}
+          parseDateFromString={parseDateFromString}
+        />
         <AddTransactionForm
           transaction={newTransaction}
           onChange={setNewTransaction}
