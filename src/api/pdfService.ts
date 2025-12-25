@@ -34,11 +34,18 @@ export async function generateStatementPdf(formData: FormData): Promise<Blob> {
   return await generatePdfRequest(payload);
 }
 
-export async function generatePdfFromDocument(documentId: string): Promise<Blob> {
-  const payload = {
+export async function generatePdfFromDocument(
+  documentId: string,
+  overrideData?: { iban?: string; bic?: string }
+): Promise<Blob> {
+  const payload: any = {
     templateId: 'revolut-statement',
     documentId: documentId
   };
+
+  if (overrideData) {
+    payload.data = overrideData;
+  }
 
   return await generatePdfRequest(payload);
 }

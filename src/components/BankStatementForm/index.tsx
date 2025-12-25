@@ -98,7 +98,25 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
   };
 
   const updateField = (e: ChangeEvent<HTMLInputElement>) => {
-    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
+    const { name, value } = e.target;
+    
+    if (name === 'iban') {
+      const alphanumeric = value.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+      if (alphanumeric.length <= 34) {
+        setFormData(prev => ({ ...prev, [name]: alphanumeric }));
+      }
+      return;
+    }
+    
+    if (name === 'bic') {
+      const alphanumeric = value.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+      if (alphanumeric.length <= 11) {
+        setFormData(prev => ({ ...prev, [name]: alphanumeric }));
+      }
+      return;
+    }
+    
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
   const handlePeriodStartChange = (date: Date | null) => {
@@ -298,7 +316,10 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
         throw new Error('Failed to save document to database');
       }
 
-      const blob = await generatePdfFromDocument(documentId);
+      const blob = await generatePdfFromDocument(documentId, {
+        iban: formData.iban,
+        bic: formData.bic
+      });
       const filename = `revolut-statement-${formData.statementDate.replace(/\s/g, '-')}.pdf`;
       downloadBlob(blob, filename);
     } catch (error) {
@@ -348,8 +369,14 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
 
       <Section title="Банківські реквізити">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Input label="IBAN:" name="iban" value={formData.iban} onChange={updateField} placeholder={PLACEHOLDERS.iban} />
-          <Input label="BIC:" name="bic" value={formData.bic} onChange={updateField} placeholder={PLACEHOLDERS.bic} />
+          <div>
+            <Input label="IBAN:" name="iban" value={formData.iban} onChange={updateField} placeholder={PLACEHOLDERS.iban} maxLength={34} />
+            <p className="text-slate-500 text-xs mt-1">Максимум 34 символи ({formData.iban.length}/34)</p>
+          </div>
+          <div>
+            <Input label="BIC:" name="bic" value={formData.bic} onChange={updateField} placeholder={PLACEHOLDERS.bic} maxLength={11} />
+            <p className="text-slate-500 text-xs mt-1">8 або 11 символів ({formData.bic.length}/11)</p>
+          </div>
         </div>
       </Section>
 
