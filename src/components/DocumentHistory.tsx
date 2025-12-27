@@ -34,7 +34,7 @@ export function DocumentHistory({ onEdit, onBack }: DocumentHistoryProps) {
       setDocuments(docs);
     } catch (error) {
       console.error('Error loading documents:', error);
-      alert('Помилка завантаження документів');
+      alert('Error loading documents');
     } finally {
       setIsLoading(false);
     }
@@ -47,12 +47,12 @@ export function DocumentHistory({ onEdit, onBack }: DocumentHistoryProps) {
       downloadBlob(blob, filename);
     } catch (error) {
       console.error('Error downloading PDF:', error);
-      alert('Помилка завантаження PDF');
+      alert('Error downloading PDF');
     }
   };
 
   const handleDelete = async (documentId: string) => {
-    if (!confirm('Видалити цей документ?')) return;
+    if (!confirm('Delete this document?')) return;
 
     try {
       const { error } = await supabase
@@ -63,15 +63,15 @@ export function DocumentHistory({ onEdit, onBack }: DocumentHistoryProps) {
       if (error) throw error;
 
       setDocuments(docs => docs.filter(d => d.id !== documentId));
-      alert('Документ видалено');
+      alert('Document deleted');
     } catch (error) {
       console.error('Error deleting document:', error);
-      alert('Помилка видалення документа');
+      alert('Error deleting document');
     }
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('uk-UA');
+    return new Date(dateString).toLocaleDateString('en-US');
   };
 
   if (isLoading) {
@@ -85,7 +85,7 @@ export function DocumentHistory({ onEdit, onBack }: DocumentHistoryProps) {
   if (documents.length === 0) {
     return (
       <div className="text-center text-slate-400 py-8">
-        Немає збережених документів
+        No saved documents
       </div>
     );
   }
@@ -96,7 +96,7 @@ export function DocumentHistory({ onEdit, onBack }: DocumentHistoryProps) {
         <button
           onClick={onBack}
           className="flex items-center justify-center w-10 h-10 rounded-lg bg-emerald-600 hover:bg-emerald-700 transition-colors cursor-pointer"
-          aria-label="Назад"
+          aria-label="Back"
         >
           <svg
             className="w-5 h-5 text-white"
@@ -112,17 +112,17 @@ export function DocumentHistory({ onEdit, onBack }: DocumentHistoryProps) {
             />
           </svg>
         </button>
-        <h2 className="text-xl font-semibold text-slate-200">Історія документів</h2>
+        <h2 className="text-xl font-semibold text-slate-200">Document history</h2>
       </div>
       
       <div className="overflow-x-auto">
         <table className="w-full border-collapse">
           <thead>
             <tr className="border-b border-slate-700">
-              <th className="text-left text-slate-400 text-sm font-medium py-3 px-4">Період</th>
-              <th className="text-left text-slate-400 text-sm font-medium py-3 px-4">Створено</th>
-              <th className="text-left text-slate-400 text-sm font-medium py-3 px-4">Термін зберігання</th>
-              <th className="text-right text-slate-400 text-sm font-medium py-3 px-4">Дії</th>
+              <th className="text-left text-slate-400 text-sm font-medium py-3 px-4">Period</th>
+              <th className="text-left text-slate-400 text-sm font-medium py-3 px-4">Created</th>
+              <th className="text-left text-slate-400 text-sm font-medium py-3 px-4">Storage period</th>
+              <th className="text-right text-slate-400 text-sm font-medium py-3 px-4">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -135,10 +135,10 @@ export function DocumentHistory({ onEdit, onBack }: DocumentHistoryProps) {
                   {formatDate(doc.created_at)}
                 </td>
                 <td className="py-3 px-4 text-slate-300 text-sm">
-                  {doc.storage_days ? `${doc.storage_days} днів` : '-'}
+                  {doc.storage_days ? `${doc.storage_days} days` : '-'}
                   {doc.expires_at && (
                     <div className="text-xs text-slate-500">
-                      до {formatDate(doc.expires_at)}
+                      until {formatDate(doc.expires_at)}
                     </div>
                   )}
                 </td>
@@ -149,21 +149,21 @@ export function DocumentHistory({ onEdit, onBack }: DocumentHistoryProps) {
                       onClick={() => onEdit(doc.id)}
                       className="text-xs px-3 py-1"
                     >
-                      Редагувати
+                      Edit
                     </Button>
                     <Button
                       variant="primary"
                       onClick={() => handleDownload(doc.id)}
                       className="text-xs px-3 py-1"
                     >
-                      Скачати
+                      Download
                     </Button>
                     <Button
                       variant="danger"
                       onClick={() => handleDelete(doc.id)}
                       className="text-xs px-3 py-1"
                     >
-                      Видалити
+                      Delete
                     </Button>
                   </div>
                 </td>

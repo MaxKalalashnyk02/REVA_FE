@@ -18,7 +18,7 @@ export function AuthForm() {
 
     try {
       if (!email || !password) {
-        setError('Введи email і пароль');
+        setError('Enter email and password');
         return;
       }
 
@@ -46,7 +46,7 @@ export function AuthForm() {
     <div className="w-full max-w-md mx-auto bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-2xl">
       <h1 className="text-xl font-semibold text-slate-50 mb-2">REVA</h1>
       <p className="text-slate-400 text-sm mb-6">
-        Увійди або зареєструйся, щоб зберігати свої виписки та транзакції.
+        Sign in or sign up to save your statements and transactions.
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-4">
@@ -58,11 +58,11 @@ export function AuthForm() {
           placeholder="you@example.com"
         />
         <Input
-          label="Пароль"
+          label="Password"
           type="password"
           value={password}
           onChange={e => setPassword(e.target.value)}
-          placeholder="Мінімум 6 символів"
+          placeholder="Minimum 6 characters"
         />
 
         {error && (
@@ -76,11 +76,11 @@ export function AuthForm() {
         >
           {isLoading
             ? mode === 'signup'
-              ? 'Реєстрація...'
-              : 'Вхід...'
+              ? 'Signing up...'
+              : 'Signing in...'
             : mode === 'signup'
-              ? 'Зареєструватися'
-              : 'Увійти'}
+              ? 'Sign up'
+              : 'Sign in'}
         </Button>
       </form>
 
@@ -90,8 +90,8 @@ export function AuthForm() {
         onClick={() => setMode(mode === 'signup' ? 'signin' : 'signup')}
       >
         {mode === 'signup'
-          ? 'Вже є акаунт? Увійти'
-          : 'Немає акаунта? Зареєструватися'}
+          ? 'Already have an account? Sign in'
+          : "Don't have an account? Sign up"}
       </button>
     </div>
   );

@@ -66,12 +66,12 @@ export function parseTransactionsFromExcel(file: File): Promise<Transaction[]> {
 
         resolve(transactions);
       } catch (error) {
-        reject(new Error('Помилка при читанні Excel файлу. Перевірте формат.'));
+        reject(new Error('Error reading the Excel file. Please check the format.'));
       }
     };
 
     reader.onerror = () => {
-      reject(new Error('Помилка при завантаженні файлу'));
+      reject(new Error('Error uploading the file'));
     };
 
     reader.readAsBinaryString(file);

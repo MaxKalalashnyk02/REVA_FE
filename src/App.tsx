@@ -61,7 +61,7 @@ export default function App() {
           <div>
             <h1 className="text-xl font-semibold">REVA</h1>
             <p className="text-xs text-slate-400">
-              Увійшов як {session.user.email}
+              Signed in as {session.user.email}
             </p>
           </div>
           
@@ -77,7 +77,7 @@ export default function App() {
                   : 'bg-transparent border border-emerald-600 text-emerald-400 hover:bg-emerald-600/10'
               }`}
             >
-              Головна
+              Home
             </button>
             <button
               onClick={() => setCurrentView('history')}
@@ -87,12 +87,12 @@ export default function App() {
                   : 'bg-transparent border border-emerald-600 text-emerald-400 hover:bg-emerald-600/10'
               }`}
             >
-              Історія
+              History
             </button>
           </div>
 
           <Button variant="danger" onClick={handleSignOut}>
-            Вийти
+            Sign out
           </Button>
         </header>
 

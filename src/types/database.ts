@@ -131,7 +131,6 @@ export interface Database {
   };
 }
 
-// Типи для зручності
 export type Company = Database['public']['Tables']['companies']['Row'];
 export type CompanyInsert = Database['public']['Tables']['companies']['Insert'];
 

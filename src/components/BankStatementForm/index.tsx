@@ -45,7 +45,7 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
     try {
       const doc = await getDocumentById(docId);
       if (!doc) {
-        alert('Документ не знайдено');
+        alert('Document not found');
         return;
       }
 
@@ -91,7 +91,7 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
       setPeriodEnd(new Date(doc.period_end));
     } catch (error) {
       console.error('Error loading document:', error);
-      alert('Помилка завантаження документа');
+      alert('Error loading document');
     } finally {
       setIsLoadingDocument(false);
     }
@@ -178,7 +178,7 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
 
   const addTransaction = () => {
     if (!newTransaction.date || !newTransaction.description) {
-      alert('Будь ласка, заповніть дату та опис');
+      alert('Please fill in the date and description');
       return;
     }
 
@@ -242,7 +242,7 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
         transactions: updatedTransactions
       }));
     } catch (error) {
-      alert(error instanceof Error ? error.message : 'Помилка імпорту');
+      alert(error instanceof Error ? error.message : 'Import error');
     }
   };
 
@@ -271,7 +271,7 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
     
     const file = files[0];
     if (!file.name.endsWith('.xlsx') && !file.name.endsWith('.xls')) {
-      alert('Будь ласка, завантажте файл Excel (.xlsx або .xls)');
+      alert('Please upload an Excel file (.xlsx or .xls)');
       return;
     }
     
@@ -280,7 +280,7 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
 
   const handleGeneratePdf = async () => {
     if (!formData.contactPhone || formData.contactPhone.trim() === '') {
-      alert('Будь ласка, заповніть контактний телефон');
+      alert('Please fill in the contact phone');
       return;
     }
 
@@ -328,17 +328,17 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
       let errorMessage = 'Unknown error';
       if (error instanceof Error) {
         if (error.message.includes('not authenticated')) {
-          errorMessage = 'Сесія закінчилася. Будь ласка, увійдіть знову.';
+          errorMessage = 'Your session has expired. Please sign in again.';
         } else if (error.message.includes('socket hang up')) {
-          errorMessage = 'Помилка з\'єднання з сервером. Спробуйте ще раз.';
+          errorMessage = 'Server connection error. Please try again.';
         } else if (error.message.includes('Document not found')) {
-          errorMessage = 'Документ не знайдено в базі даних.';
+          errorMessage = 'Document not found in the database.';
         } else {
           errorMessage = error.message;
         }
       }
       
-      alert(`Помилка: ${errorMessage}`);
+      alert(`Error: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
@@ -347,7 +347,7 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
   if (isLoadingDocument) {
     return (
       <div className="w-full flex items-center justify-center min-h-[400px]">
-        <Loader text="Завантаження документа..." />
+        <Loader text="Loading document..." />
       </div>
     );
   }
@@ -355,35 +355,35 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
   return (
     <div className="w-full bg-slate-900 rounded-xl p-4 md:p-6 border border-slate-800">
       
-      <Section title="Інформація про власника рахунку">
+      <Section title="Account holder information">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <Input label="Ім'я:" name="accountHolderName" value={formData.accountHolderName} onChange={updateField} placeholder={PLACEHOLDERS.accountHolderName} />
-          <Input label="Адреса:" name="address" value={formData.address} onChange={updateField} placeholder={PLACEHOLDERS.address} />
+          <Input label="Name:" name="accountHolderName" value={formData.accountHolderName} onChange={updateField} placeholder={PLACEHOLDERS.accountHolderName} />
+          <Input label="Address:" name="address" value={formData.address} onChange={updateField} placeholder={PLACEHOLDERS.address} />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Input label="Поштовий індекс:" name="postalCode" value={formData.postalCode} onChange={updateField} placeholder={PLACEHOLDERS.postalCode} />
-          <Input label="Місто:" name="city" value={formData.city} onChange={updateField} placeholder={PLACEHOLDERS.city} />
-          <Input label="Країна:" name="country" value={formData.country} onChange={updateField} placeholder={PLACEHOLDERS.country} />
+          <Input label="Postal code:" name="postalCode" value={formData.postalCode} onChange={updateField} placeholder={PLACEHOLDERS.postalCode} />
+          <Input label="City:" name="city" value={formData.city} onChange={updateField} placeholder={PLACEHOLDERS.city} />
+          <Input label="Country:" name="country" value={formData.country} onChange={updateField} placeholder={PLACEHOLDERS.country} />
         </div>
       </Section>
 
-      <Section title="Банківські реквізити">
+      <Section title="Bank details">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Input label="IBAN:" name="iban" value={formData.iban} onChange={updateField} placeholder={PLACEHOLDERS.iban} maxLength={34} />
-            <p className="text-slate-500 text-xs mt-1">Максимум 34 символи ({formData.iban.length}/34)</p>
+            <p className="text-slate-500 text-xs mt-1">Maximum 34 characters ({formData.iban.length}/34)</p>
           </div>
           <div>
             <Input label="BIC:" name="bic" value={formData.bic} onChange={updateField} placeholder={PLACEHOLDERS.bic} maxLength={11} />
-            <p className="text-slate-500 text-xs mt-1">8 або 11 символів ({formData.bic.length}/11)</p>
+            <p className="text-slate-500 text-xs mt-1">8 or 11 characters ({formData.bic.length}/11)</p>
           </div>
         </div>
       </Section>
 
-      <Section title="Баланс">
+      <Section title="Balance">
         <div className="flex justify-end mb-2">
           <label className="text-slate-300 text-sm flex items-center gap-2">
-            Валюта:
+            Currency:
             <select
               value={formData.currency}
               onChange={handleCurrencyChange}
@@ -395,19 +395,19 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
           </label>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <Input label={`Початковий баланс (${currencySymbol}):`} type="number" step="0.01" name="openingBalance" value={formData.openingBalance} onChange={updateField} placeholder={PLACEHOLDERS.openingBalance} />
-          <Input label={`Витрачено (${currencySymbol}):`} type="number" step="0.01" name="moneyOut" value={formData.moneyOut} onChange={updateField} placeholder={PLACEHOLDERS.moneyOut} />
-          <Input label={`Надійшло (${currencySymbol}):`} type="number" step="0.01" name="moneyIn" value={formData.moneyIn} onChange={updateField} placeholder={PLACEHOLDERS.moneyIn} />
+          <Input label={`Opening balance (${currencySymbol}):`} type="number" step="0.01" name="openingBalance" value={formData.openingBalance} onChange={updateField} placeholder={PLACEHOLDERS.openingBalance} />
+          <Input label={`Money out (${currencySymbol}):`} type="number" step="0.01" name="moneyOut" value={formData.moneyOut} onChange={updateField} placeholder={PLACEHOLDERS.moneyOut} />
+          <Input label={`Money in (${currencySymbol}):`} type="number" step="0.01" name="moneyIn" value={formData.moneyIn} onChange={updateField} placeholder={PLACEHOLDERS.moneyIn} />
           <div>
             <label className="block text-slate-400 text-sm font-medium mb-1.5">
-              Кінцевий баланс ({currencySymbol}):
+              Closing balance ({currencySymbol}):
             </label>
             <div className="px-3 py-1 bg-slate-800 border border-slate-700 rounded-md text-emerald-400 font-semibold text-lg">
               {calculatedClosingBalance}
             </div>
           </div>
           <Input 
-            label="Термін зберігання (днів):" 
+            label="Storage period (days):" 
             type="number" 
             min="1" 
             max="31" 
@@ -419,50 +419,50 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
         </div>
       </Section>
 
-      <Section title="Період транзакцій">
+      <Section title="Transaction period">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
-            <p className="text-slate-400 text-sm font-medium mb-1.5">Дата генерації:</p>
+            <p className="text-slate-400 text-sm font-medium mb-1.5">Generated on:</p>
             <p className="px-3 py-2 bg-slate-800 border border-slate-700 rounded-md text-slate-200">
               {formData.statementDate}
             </p>
-            <p className="text-slate-500 text-xs mt-1">Автоматично — сьогодні</p>
+            <p className="text-slate-500 text-xs mt-1">Automatically — today</p>
           </div>
           <DatePicker 
-            label="Початок періоду:" 
+            label="Period start:" 
             selected={periodStart}
             onChange={handlePeriodStartChange}
-            placeholderText="Оберіть дату..."
+            placeholderText="Select a date..."
           />
           <DatePicker 
-            label="Кінець періоду:" 
+            label="Period end:" 
             selected={periodEnd}
             onChange={handlePeriodEndChange}
-            placeholderText="Оберіть дату..."
+            placeholderText="Select a date..."
           />
         </div>
         {(formData.periodStart || formData.periodEnd) && (
           <p className="text-slate-500 text-xs mt-3">
-            Період: <span className="text-slate-300">{formData.periodStart || '—'}</span> — <span className="text-slate-300">{formData.periodEnd || '—'}</span>
+            Period: <span className="text-slate-300">{formData.periodStart || '—'}</span> — <span className="text-slate-300">{formData.periodEnd || '—'}</span>
           </p>
         )}
       </Section>
 
-      <Section title="Транзакції">
+      <Section title="Transactions">
         <div className="mb-4 flex flex-wrap gap-2">
           <Button
             variant="primary"
             onClick={downloadTransactionsTemplate}
             className="text-sm"
           >
-            Скачати шаблон Excel
+            Download Excel template
           </Button>
           <Button
             variant="primary"
             onClick={() => fileInputRef.current?.click()}
             className="text-sm"
           >
-            Імпортувати з Excel
+            Import from Excel
           </Button>
           {formData.transactions.length > 0 && (
             <Button
@@ -470,7 +470,7 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
               onClick={() => exportTransactionsToExcel(formData.transactions)}
               className="text-sm"
             >
-              Експортувати в Excel
+              Export to Excel
             </Button>
           )}
         </div>
@@ -487,7 +487,7 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
           className="border-2 border-dashed border-slate-700 rounded-lg p-4 mb-4 transition-colors hover:border-sky-500 hover:bg-slate-800/50"
         >
           <p className="text-slate-400 text-sm text-center">
-            Перетягніть Excel файл сюди або використайте кнопку "Імпортувати з Excel"
+            Drag an Excel file here or use the "Import from Excel" button
           </p>
         </div>
         <TransactionList 
@@ -513,9 +513,9 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
         />
       </Section>
 
-      <Section title="Контактна інформація">
+      <Section title="Contact information">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Input label="Контактний телефон:" name="contactPhone" value={formData.contactPhone} onChange={updateField} placeholder={PLACEHOLDERS.contactPhone} required />
+          <Input label="Contact phone:" name="contactPhone" value={formData.contactPhone} onChange={updateField} placeholder={PLACEHOLDERS.contactPhone} required />
         </div>
       </Section>
 
@@ -527,11 +527,11 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
       >
         {isLoading ? (
           <span className="inline-flex items-center gap-1">
-            {documentId ? 'Оновлюється' : 'Генерується'}
+            {documentId ? 'Updating' : 'Generating'}
             <span className="loading-dots"></span>
           </span>
         ) : (
-          documentId ? 'Оновити документ' : 'Згенерувати PDF'
+          documentId ? 'Update document' : 'Generate PDF'
         )}
       </Button>
     </div>

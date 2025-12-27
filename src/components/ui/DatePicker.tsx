@@ -32,7 +32,7 @@ const CustomInput = forwardRef<HTMLButtonElement, CustomInputProps>(
           transition-colors"
       >
         <span className={value ? 'text-slate-200' : 'text-slate-500'}>
-          {value || 'Оберіть дату...'}
+          {value || 'Select a date...'}
         </span>
         <svg 
           xmlns="http://www.w3.org/2000/svg" 
@@ -116,7 +116,7 @@ const CustomInputSmall = forwardRef<HTMLButtonElement, CustomInputProps>(
           transition-colors"
       >
         <span className={value ? 'text-slate-200' : 'text-slate-500 text-sm'}>
-          {value || 'Оберіть дату...'}
+          {value || 'Select a date...'}
         </span>
         <svg 
           xmlns="http://www.w3.org/2000/svg" 

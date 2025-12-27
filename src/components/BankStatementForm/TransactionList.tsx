@@ -33,7 +33,7 @@ export function TransactionList({ transactions, onRemove, currency = 'EUR', peri
   if (!transactions.length) {
     return (
       <p className="text-slate-500 text-sm py-4 text-center">
-        Немає транзакцій
+        No transactions
       </p>
     );
   }
@@ -68,7 +68,7 @@ export function TransactionList({ transactions, onRemove, currency = 'EUR', peri
           <div className="flex items-center justify-between md:justify-end gap-2">
             <span className="text-slate-200 font-medium text-sm">{currencySymbol}{tx.balance}</span>
             <Button variant="danger" onClick={() => onRemove(index)} className="px-3 py-1 text-sm">
-              Видалити
+              Delete
             </Button>
           </div>
         </div>
