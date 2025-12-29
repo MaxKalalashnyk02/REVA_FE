@@ -92,7 +92,7 @@ export function DatePicker({
       wrapperClassName="w-full"
       showMonthDropdown
       showYearDropdown
-      dropdownMode="select"
+      dropdownMode="scroll"
       popperPlacement="bottom-start"
       portalId="root"
       open={isOpen}
@@ -101,7 +101,6 @@ export function DatePicker({
   );
 }
 
-// Small version for transaction form - matches InputSmall styling
 const CustomInputSmall = forwardRef<HTMLButtonElement, CustomInputProps>(
   ({ value, label, onToggle }, ref) => (
     <label className="flex flex-col text-slate-400 text-sm font-medium">
@@ -176,7 +175,7 @@ export function DatePickerSmall({
       wrapperClassName="w-full"
       showMonthDropdown
       showYearDropdown
-      dropdownMode="select"
+      dropdownMode="scroll"
       popperPlacement="bottom-start"
       portalId="root"
       open={isOpen}
