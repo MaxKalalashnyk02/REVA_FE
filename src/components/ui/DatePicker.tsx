@@ -77,13 +77,28 @@ export function DatePicker({
 
   const handleChange = (date: Date | null) => {
     onChange(date);
+  };
+
+  const handleSelect = (date: Date | null) => {
+    onChange(date);
     setIsOpen(false);
+  };
+
+  const handleMonthChange = (date: Date) => {
+    onChange(date);
+  };
+
+  const handleYearChange = (date: Date) => {
+    onChange(date);
   };
 
   return (
     <ReactDatePicker
       selected={selected}
       onChange={handleChange}
+      onSelect={handleSelect}
+      onMonthChange={handleMonthChange}
+      onYearChange={handleYearChange}
       dateFormat={dateFormat}
       customInput={<CustomInput label={label} onToggle={handleToggle} />}
       showPopperArrow={false}
@@ -160,13 +175,28 @@ export function DatePickerSmall({
 
   const handleChange = (date: Date | null) => {
     onChange(date);
+  };
+
+  const handleSelect = (date: Date | null) => {
+    onChange(date);
     setIsOpen(false);
+  };
+
+  const handleMonthChange = (date: Date) => {
+    onChange(date);
+  };
+
+  const handleYearChange = (date: Date) => {
+    onChange(date);
   };
 
   return (
     <ReactDatePicker
       selected={selected}
       onChange={handleChange}
+      onSelect={handleSelect}
+      onMonthChange={handleMonthChange}
+      onYearChange={handleYearChange}
       dateFormat={dateFormat}
       customInput={<CustomInputSmall label={label} onToggle={handleToggle} />}
       showPopperArrow={false}
