@@ -54,8 +54,8 @@ export function TransactionList({ transactions, onRemove, currency = 'EUR', peri
             <div className="text-slate-300 text-sm">{tx.description}</div>
             {(tx.reference || tx.recipient) && (
               <div className="text-xs text-slate-500 mt-0.5 leading-snug">
-                {tx.reference && <div>Reference: {tx.reference}</div>}
-                {tx.recipient && <div>To: {tx.recipient}</div>}
+                {tx.reference && <div>To: {tx.reference}</div>}
+                {tx.recipient && <div>Card: {tx.recipient}</div>}
               </div>
             )}
           </div>

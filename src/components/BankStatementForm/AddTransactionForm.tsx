@@ -3,6 +3,7 @@ import type { Transaction } from '../../types';
 import { InputSmall, DatePickerSmall, Button } from '../ui';
 import { formatDate } from '../../utils/date';
 import { PLACEHOLDERS } from './constants';
+import { CARD_NUMBER_LENGTH, isValidCardNumber, sanitizeCardNumber } from '../../utils/card';
 
 interface AddTransactionFormProps {
   transaction: Transaction;
@@ -30,7 +31,14 @@ export function AddTransactionForm({ transaction, onChange, onAdd, currency, ope
     onChange({ ...transaction, [e.target.name]: e.target.value });
   };
 
-  const handleDateChange = (date: Date | null) => {
+  const cardNumber = transaction.recipient ?? '';
+  const cardInvalid = cardNumber !== '' && !isValidCardNumber(cardNumber);
+
+  const handleCardChange = (e: ChangeEvent<HTMLInputElement>) => {
+    onChange({ ...transaction, recipient: sanitizeCardNumber(e.target.value) });
+  };
+
+  const handleDateChange =(date: Date | null) => {
     setSelectedDate(date);
     if (date) {
       onChange({ ...transaction, date: formatDate(date) });
@@ -65,19 +73,29 @@ export function AddTransactionForm({ transaction, onChange, onAdd, currency, ope
           />
         </div>
         <InputSmall
-          label="Reference:"
+          label="To:"
           name="reference"
           value={transaction.reference ?? ''}
           onChange={handleChange}
           placeholder={PLACEHOLDERS.transactionReference}
         />
-        <InputSmall
-          label="To:"
-          name="recipient"
-          value={transaction.recipient ?? ''}
-          onChange={handleChange}
-          placeholder={PLACEHOLDERS.transactionRecipient}
-        />
+        <div>
+          <InputSmall
+            label="Card:"
+            name="recipient"
+            inputMode="numeric"
+            maxLength={CARD_NUMBER_LENGTH}
+            value={transaction.recipient ?? ''}
+            onChange={handleCardChange}
+            placeholder={PLACEHOLDERS.transactionRecipient}
+            className={cardInvalid ? 'border-red-500' : ''}
+          />
+          {cardInvalid && (
+            <p className="text-red-400 text-xs mt-1">
+              {cardNumber.length}/{CARD_NUMBER_LENGTH} digits
+            </p>
+          )}
+        </div>
         <InputSmall
           label={`Money out (${currencySymbol}):`}
           type="number"

@@ -8,6 +8,7 @@ export async function generateStatementPdf(formData: FormData): Promise<Blob> {
     data: {
       accountHolderName: formData.accountHolderName,
       address: formData.address,
+      apartment: formData.apartment,
       postalCode: formData.postalCode,
       city: formData.city,
       country: formData.country,
@@ -36,7 +37,7 @@ export async function generateStatementPdf(formData: FormData): Promise<Blob> {
 
 export async function generatePdfFromDocument(
   documentId: string,
-  overrideData?: { iban?: string; bic?: string }
+  overrideData?: { iban?: string; bic?: string; apartment?: string }
 ): Promise<Blob> {
   const payload: any = {
     templateId: 'revolut-statement',

@@ -11,6 +11,7 @@ export interface Transaction {
 export interface FormData {
   accountHolderName: string;
   address: string;
+  apartment: string;
   postalCode: string;
   city: string;
   country: string;
@@ -42,6 +43,7 @@ export interface PdfPayload {
   data: {
     accountHolderName: string;
     address: string;
+    apartment: string;
     postalCode: string;
     city: string;
     country: string;

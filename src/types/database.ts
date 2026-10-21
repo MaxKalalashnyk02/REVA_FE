@@ -7,6 +7,7 @@ export interface Database {
           user_id: string;
           name: string;
           address: string | null;
+          apartment: string | null;
           postal_code: string | null;
           city: string | null;
           country: string | null;
@@ -21,6 +22,7 @@ export interface Database {
           user_id: string;
           name: string;
           address?: string | null;
+          apartment?: string | null;
           postal_code?: string | null;
           city?: string | null;
           country?: string | null;
@@ -35,6 +37,7 @@ export interface Database {
           user_id?: string;
           name?: string;
           address?: string | null;
+          apartment?: string | null;
           postal_code?: string | null;
           city?: string | null;
           country?: string | null;

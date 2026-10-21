@@ -3,6 +3,7 @@ import type { FormData, Transaction } from '../../types';
 export const INITIAL_FORM_DATA: FormData = {
   accountHolderName: '',
   address: '',
+  apartment: '',
   postalCode: '',
   city: '',
   country: '',
@@ -34,6 +35,7 @@ export const INITIAL_TRANSACTION: Transaction = {
 export const PLACEHOLDERS = {
   accountHolderName: 'Dmytro Kostin',
   address: 'Moschou 4',
+  apartment: 'App 44',
   postalCode: '3091',
   city: 'Limassol',
   country: 'Cyprus',
@@ -49,5 +51,5 @@ export const PLACEHOLDERS = {
   transactionMoneyIn: '1000.00',
   transactionBalance: '67338.64',
   transactionReference: 'To Maria N',
-  transactionRecipient: 'MARIA NTIMPIZIDOU',
+  transactionRecipient: '1234567890123456',
 };

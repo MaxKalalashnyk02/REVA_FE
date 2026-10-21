@@ -5,8 +5,9 @@ import { AddTransactionForm } from './AddTransactionForm';
 import { INITIAL_FORM_DATA, INITIAL_TRANSACTION, PLACEHOLDERS } from './constants';
 import { generatePdfFromDocument, downloadBlob } from '../../api/pdfService';
 import { saveStatementForCurrentUser, getDocumentById } from '../../api/documentService';
-import { getTodayFormatted, formatDateLong } from '../../utils/date';
+import { getTodayFormatted, formatDateLong, fromDbDate } from '../../utils/date';
 import { downloadTransactionsTemplate, parseTransactionsFromExcel, exportTransactionsToExcel } from '../../utils/excel';
+import { CARD_NUMBER_LENGTH, isValidCardNumber } from '../../utils/card';
 import type { FormData, Transaction } from '../../types';
 import { supabase } from '../../lib/supabase';
 
@@ -61,14 +62,15 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
       setFormData({
         accountHolderName: company.name || '',
         address: company.address || '',
+        apartment: company.apartment || '',
         postalCode: company.postal_code || '',
         city: company.city || '',
         country: company.country || '',
         iban: company.iban || '',
         bic: company.bic || '',
         statementDate: getTodayFormatted(),
-        periodStart: formatDateLong(new Date(doc.period_start)),
-        periodEnd: formatDateLong(new Date(doc.period_end)),
+        periodStart: formatDateLong(fromDbDate(doc.period_start)),
+        periodEnd: formatDateLong(fromDbDate(doc.period_end)),
         openingBalance: doc.opening_balance?.toString() || '',
         moneyOut: doc.money_out?.toString() || '',
         moneyIn: doc.money_in?.toString() || '',
@@ -77,7 +79,7 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
         currency: 'EUR',
         storageDays: doc.storage_days?.toString() || '7',
         transactions: ((transactions || []) as any[]).map((t: any) => ({
-          date: formatDateLong(new Date(t.date)),
+          date: formatDateLong(fromDbDate(t.date)),
           description: t.description || '',
           moneyOut: t.money_out?.toString() || '',
           moneyIn: t.money_in?.toString() || '',
@@ -87,8 +89,8 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
         })),
       });
 
-      setPeriodStart(new Date(doc.period_start));
-      setPeriodEnd(new Date(doc.period_end));
+      setPeriodStart(fromDbDate(doc.period_start));
+      setPeriodEnd(fromDbDate(doc.period_end));
     } catch (error) {
       console.error('Error loading document:', error);
       alert('Error loading document');
@@ -179,6 +181,11 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
   const addTransaction = () => {
     if (!newTransaction.date || !newTransaction.description) {
       alert('Please fill in the date and description');
+      return;
+    }
+
+    if (newTransaction.recipient && !isValidCardNumber(newTransaction.recipient)) {
+      alert(`Card number must contain exactly ${CARD_NUMBER_LENGTH} digits`);
       return;
     }
 
@@ -318,7 +325,8 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
 
       const blob = await generatePdfFromDocument(documentId, {
         iban: formData.iban,
-        bic: formData.bic
+        bic: formData.bic,
+        apartment: formData.apartment
       });
       const filename = `revolut-statement-${formData.statementDate.replace(/\s/g, '-')}.pdf`;
       downloadBlob(blob, filename);
@@ -356,9 +364,10 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
     <div className="w-full bg-slate-900 rounded-xl p-4 md:p-6 border border-slate-800">
       
       <Section title="Account holder information">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <Input label="Name:" name="accountHolderName" value={formData.accountHolderName} onChange={updateField} placeholder={PLACEHOLDERS.accountHolderName} />
           <Input label="Address:" name="address" value={formData.address} onChange={updateField} placeholder={PLACEHOLDERS.address} />
+          <Input label="Apartment:" name="apartment" value={formData.apartment} onChange={updateField} placeholder={PLACEHOLDERS.apartment} />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Input label="Postal code:" name="postalCode" value={formData.postalCode} onChange={updateField} placeholder={PLACEHOLDERS.postalCode} />

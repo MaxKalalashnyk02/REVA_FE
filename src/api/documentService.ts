@@ -1,4 +1,6 @@
 import { supabase } from '../lib/supabase';
+import { maskCardNumber } from '../utils/card';
+import { toDbDate } from '../utils/date';
 import type { FormData } from '../types';
 import type { Document } from '../types/database';
 
@@ -13,7 +15,7 @@ function parseDateForDb(value: string): string | null {
   if (!value) return null;
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
-  return date.toISOString().slice(0, 10); // YYYY-MM-DD
+  return toDbDate(date);
 }
 
 export async function saveStatementForCurrentUser(
@@ -60,6 +62,7 @@ export async function saveStatementForCurrentUser(
           user_id: userId,
           name: formData.accountHolderName || 'Default company',
           address: formData.address,
+          apartment: formData.apartment || null,
           postal_code: formData.postalCode,
           city: formData.city,
           country: formData.country,
@@ -79,11 +82,11 @@ export async function saveStatementForCurrentUser(
   }
 
   const periodStartDb = periodStartDate
-    ? periodStartDate.toISOString().slice(0, 10)
-    : parseDateForDb(formData.periodStart) ?? new Date().toISOString().slice(0, 10);
+    ? toDbDate(periodStartDate)
+    : parseDateForDb(formData.periodStart) ?? toDbDate(new Date());
   const periodEndDb = periodEndDate
-    ? periodEndDate.toISOString().slice(0, 10)
-    : parseDateForDb(formData.periodEnd) ?? new Date().toISOString().slice(0, 10);
+    ? toDbDate(periodEndDate)
+    : parseDateForDb(formData.periodEnd) ?? toDbDate(new Date());
 
   const storageDays = parseInt(formData.storageDays) || 7;
   const expiresAt = new Date();
@@ -122,13 +125,13 @@ export async function saveStatementForCurrentUser(
     .filter(tx => tx.description || tx.date)
     .map(tx => ({
       document_id: documentId,
-      date: parseDateForDb(tx.date) ?? new Date().toISOString().slice(0, 10),
+      date: parseDateForDb(tx.date) ?? toDbDate(new Date()),
       description: tx.description,
       money_out: parseNumber(tx.moneyOut),
       money_in: parseNumber(tx.moneyIn),
       balance: parseNumber(tx.balance) ?? 0,
       reference: tx.reference || null,
-      recipient: tx.recipient || null,
+      recipient: tx.recipient ? maskCardNumber(tx.recipient) : null,
     }));
 
   if (!txPayload.length) return documentId;
@@ -188,6 +191,7 @@ export async function getDocumentById(documentId: string): Promise<Document | nu
       companies (
         name,
         address,
+        apartment,
         postal_code,
         city,
         country,
