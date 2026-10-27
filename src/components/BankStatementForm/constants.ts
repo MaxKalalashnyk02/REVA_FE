@@ -1,4 +1,27 @@
-import type { FormData, Transaction } from '../../types';
+import type { FormData, IncomeKind, Transaction } from '../../types';
+
+export const INCOME_KINDS: { value: IncomeKind; label: string; prefix: string }[] = [
+  { value: 'transfer_from', label: 'Transfer from', prefix: 'Transfer from' },
+  { value: 'payment_from', label: 'Payment from', prefix: 'Payment from' },
+];
+
+export function buildIncomeDescription(kind: IncomeKind | undefined, counterparty: string | undefined): string {
+  const prefix = INCOME_KINDS.find(k => k.value === kind)?.prefix ?? INCOME_KINDS[0].prefix;
+  const name = (counterparty ?? '').trim();
+  return name ? `${prefix} ${name}` : '';
+}
+
+export function inferIncomeFromDescription(
+  description: string
+): Pick<Transaction, 'type' | 'incomeKind' | 'counterparty'> | null {
+  const text = description.trim();
+  for (const kind of INCOME_KINDS) {
+    if (text.toLowerCase().startsWith(kind.prefix.toLowerCase())) {
+      return { type: 'income', incomeKind: kind.value, counterparty: text.slice(kind.prefix.length).trim() };
+    }
+  }
+  return null;
+}
 
 export const INITIAL_FORM_DATA: FormData = {
   accountHolderName: '',
@@ -29,7 +52,10 @@ export const INITIAL_TRANSACTION: Transaction = {
   moneyIn: '',
   balance: '',
   reference: '',
-  recipient: ''
+  recipient: '',
+  type: 'expense',
+  incomeKind: 'transfer_from',
+  counterparty: ''
 };
 
 export const PLACEHOLDERS = {
@@ -52,4 +78,5 @@ export const PLACEHOLDERS = {
   transactionBalance: '67338.64',
   transactionReference: 'To Maria N',
   transactionRecipient: '1234567890123456',
+  transactionCounterparty: 'JOHN SMITH',
 };

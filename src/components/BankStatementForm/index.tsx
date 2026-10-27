@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, type ChangeEvent } from 'react';
 import { Input, DatePicker, Section, Button, Loader } from '../ui';
 import { TransactionList } from './TransactionList';
 import { AddTransactionForm } from './AddTransactionForm';
-import { INITIAL_FORM_DATA, INITIAL_TRANSACTION, PLACEHOLDERS } from './constants';
+import { INITIAL_FORM_DATA, INITIAL_TRANSACTION, PLACEHOLDERS, inferIncomeFromDescription } from './constants';
 import { generatePdfFromDocument, downloadBlob } from '../../api/pdfService';
 import { saveStatementForCurrentUser, getDocumentById } from '../../api/documentService';
 import { getTodayFormatted, formatDateLong, fromDbDate } from '../../utils/date';
@@ -86,6 +86,7 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
           balance: t.balance?.toString() || '',
           reference: t.reference || '',
           recipient: t.recipient || '',
+          ...(inferIncomeFromDescription(t.description || '') ?? { type: 'expense' as const }),
         })),
       });
 
@@ -178,15 +179,31 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
     }
   };
 
-  const addTransaction = () => {
+  const addTransaction = (): boolean => {
     if (!newTransaction.date || !newTransaction.description) {
       alert('Please fill in the date and description');
-      return;
+      return false;
+    }
+
+    if (newTransaction.type === 'income' && !newTransaction.counterparty?.trim()) {
+      alert('Please fill in who the money is from');
+      return false;
     }
 
     if (newTransaction.recipient && !isValidCardNumber(newTransaction.recipient)) {
       alert(`Card number must contain exactly ${CARD_NUMBER_LENGTH} digits`);
-      return;
+      return false;
+    }
+
+    if (formData.openingBalance.trim() === '') {
+      alert('Please fill in the opening balance');
+      return false;
+    }
+
+    const limitError = getTransactionLimitError([...formData.transactions, newTransaction]);
+    if (limitError) {
+      alert(limitError);
+      return false;
     }
 
     const prevBalance = formData.transactions.length > 0
@@ -210,7 +227,12 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
       ...prev,
       transactions: updatedTransactions
     }));
-    setNewTransaction(INITIAL_TRANSACTION);
+    setNewTransaction({
+      ...INITIAL_TRANSACTION,
+      type: newTransaction.type,
+      incomeKind: newTransaction.incomeKind,
+    });
+    return true;
   };
 
   const removeTransaction = (index: number) => {
@@ -235,11 +257,40 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
     (parseFloat(formData.moneyOut) || 0)
   ).toFixed(2);
 
+  const sumTransactions = (transactions: Transaction[], field: 'moneyIn' | 'moneyOut') =>
+    transactions.reduce((sum, t) => sum + (parseFloat(t[field]) || 0), 0);
+
+  const summaryMoneyIn = parseFloat(formData.moneyIn) || 0;
+  const summaryMoneyOut = parseFloat(formData.moneyOut) || 0;
+  const remainingMoneyIn = summaryMoneyIn - sumTransactions(formData.transactions, 'moneyIn');
+  const remainingMoneyOut = summaryMoneyOut - sumTransactions(formData.transactions, 'moneyOut');
+
+  const exceeds = (total: number, limit: number) => Math.round(total * 100) > Math.round(limit * 100);
+
+  const getTransactionLimitError = (transactions: Transaction[]): string | null => {
+    const totalIn = sumTransactions(transactions, 'moneyIn');
+    const totalOut = sumTransactions(transactions, 'moneyOut');
+
+    if (exceeds(totalIn, summaryMoneyIn)) {
+      return `Total money in of transactions (${totalIn.toFixed(2)} ${currencySymbol}) exceeds money in in balance summary (${summaryMoneyIn.toFixed(2)} ${currencySymbol})`;
+    }
+    if (exceeds(totalOut, summaryMoneyOut)) {
+      return `Total money out of transactions (${totalOut.toFixed(2)} ${currencySymbol}) exceeds money out in balance summary (${summaryMoneyOut.toFixed(2)} ${currencySymbol})`;
+    }
+    return null;
+  };
+
   const processExcelFile = async (file: File) => {
     try {
       const transactions = await parseTransactionsFromExcel(file);
       const updatedTransactions = [...formData.transactions, ...transactions];
-      
+
+      const limitError = getTransactionLimitError(updatedTransactions);
+      if (limitError) {
+        alert(limitError);
+        return;
+      }
+
       if (!periodStart || !periodEnd) {
         updatePeriodDatesFromTransactions(updatedTransactions);
       }
@@ -288,6 +339,17 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
   const handleGeneratePdf = async () => {
     if (!formData.contactPhone || formData.contactPhone.trim() === '') {
       alert('Please fill in the contact phone');
+      return;
+    }
+
+    if (formData.openingBalance.trim() === '') {
+      alert('Please fill in the opening balance');
+      return;
+    }
+
+    const limitError = getTransactionLimitError(formData.transactions);
+    if (limitError) {
+      alert(limitError);
       return;
     }
 
@@ -404,7 +466,7 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
           </label>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <Input label={`Opening balance (${currencySymbol}):`} type="number" step="0.01" name="openingBalance" value={formData.openingBalance} onChange={updateField} placeholder={PLACEHOLDERS.openingBalance} />
+          <Input label={`Opening balance (${currencySymbol}):`} type="number" step="0.01" name="openingBalance" value={formData.openingBalance} onChange={updateField} placeholder={PLACEHOLDERS.openingBalance} required />
           <Input label={`Money out (${currencySymbol}):`} type="number" step="0.01" name="moneyOut" value={formData.moneyOut} onChange={updateField} placeholder={PLACEHOLDERS.moneyOut} />
           <Input label={`Money in (${currencySymbol}):`} type="number" step="0.01" name="moneyIn" value={formData.moneyIn} onChange={updateField} placeholder={PLACEHOLDERS.moneyIn} />
           <div>
@@ -514,6 +576,8 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
           onAdd={addTransaction}
           currency={formData.currency}
           openingBalance={formData.openingBalance}
+          remainingMoneyIn={remainingMoneyIn.toFixed(2)}
+          remainingMoneyOut={remainingMoneyOut.toFixed(2)}
           lastTransactionBalance={
             formData.transactions.length > 0
               ? formData.transactions[formData.transactions.length - 1].balance

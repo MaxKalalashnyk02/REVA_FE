@@ -1,3 +1,7 @@
+export type TransactionType = 'expense' | 'income';
+
+export type IncomeKind = 'transfer_from' | 'payment_from' | 'top_up';
+
 export interface Transaction {
   date: string;
   description: string;
@@ -6,6 +10,9 @@ export interface Transaction {
   balance: string;
   reference?: string;
   recipient?: string;
+  type?: TransactionType;
+  incomeKind?: IncomeKind;
+  counterparty?: string;
 }
 
 export interface FormData {
