@@ -12,8 +12,6 @@ interface AddTransactionFormProps {
   currency: 'EUR' | 'USD';
   openingBalance: string;
   lastTransactionBalance: string;
-  remainingMoneyIn: string;
-  remainingMoneyOut: string;
 }
 
 export function AddTransactionForm({
@@ -22,9 +20,7 @@ export function AddTransactionForm({
   onAdd,
   currency,
   openingBalance,
-  lastTransactionBalance,
-  remainingMoneyIn,
-  remainingMoneyOut
+  lastTransactionBalance
 }: AddTransactionFormProps) {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
@@ -37,20 +33,8 @@ export function AddTransactionForm({
     (parseFloat(transaction.moneyOut) || 0)
   ).toFixed(2);
 
-  const moneyInExceeded = (parseFloat(transaction.moneyIn) || 0) > parseFloat(remainingMoneyIn);
-  const moneyOutExceeded = (parseFloat(transaction.moneyOut) || 0) > parseFloat(remainingMoneyOut);
-
   const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-
-    if (name === 'moneyIn' || name === 'moneyOut') {
-      const remaining = Math.max(0, parseFloat(name === 'moneyIn' ? remainingMoneyIn : remainingMoneyOut) || 0);
-      if (value !== '' && parseFloat(value) > remaining) {
-        onChange({ ...transaction, [name]: remaining.toFixed(2) });
-        return;
-      }
-    }
-
     onChange({ ...transaction, [name]: value });
   };
 
@@ -184,12 +168,10 @@ export function AddTransactionForm({
               type="number"
               step="0.01"
               min="0"
-              max={remainingMoneyIn}
               name="moneyIn"
               value={transaction.moneyIn}
               onChange={handleChange}
               placeholder={PLACEHOLDERS.transactionMoneyIn}
-              className={moneyInExceeded ? 'border-red-500' : ''}
             />
           </div>
         ) : (
@@ -199,12 +181,10 @@ export function AddTransactionForm({
               type="number"
               step="0.01"
               min="0"
-              max={remainingMoneyOut}
               name="moneyOut"
               value={transaction.moneyOut}
               onChange={handleChange}
               placeholder={PLACEHOLDERS.transactionMoneyOut}
-              className={moneyOutExceeded ? 'border-red-500' : ''}
             />
           </div>
         )}

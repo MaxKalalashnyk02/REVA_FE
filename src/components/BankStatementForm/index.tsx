@@ -210,12 +210,6 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
       return false;
     }
 
-    const limitError = getTransactionLimitError([...formData.transactions, newTransaction]);
-    if (limitError) {
-      alert(limitError);
-      return false;
-    }
-
     const prevBalance = formData.transactions.length > 0
       ? parseFloat(formData.transactions[formData.transactions.length - 1].balance) || 0
       : parseFloat(formData.openingBalance) || 0;
@@ -233,9 +227,16 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
     
     updatePeriodDatesFromTransactions(updatedTransactions);
 
+    const raiseTotal = (current: string, field: 'moneyIn' | 'moneyOut') => {
+      const sum = sumAmounts(updatedTransactions, field);
+      return exceeds(parseFloat(sum), parseFloat(current) || 0) ? sum : current;
+    };
+
     setFormData(prev => ({
       ...prev,
-      transactions: updatedTransactions
+      transactions: updatedTransactions,
+      moneyIn: raiseTotal(prev.moneyIn, 'moneyIn'),
+      moneyOut: raiseTotal(prev.moneyOut, 'moneyOut'),
     }));
     setNewTransaction({
       ...INITIAL_TRANSACTION,
@@ -272,8 +273,6 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
 
   const summaryMoneyIn = parseFloat(formData.moneyIn) || 0;
   const summaryMoneyOut = parseFloat(formData.moneyOut) || 0;
-  const remainingMoneyIn = summaryMoneyIn - sumTransactions(formData.transactions, 'moneyIn');
-  const remainingMoneyOut = summaryMoneyOut - sumTransactions(formData.transactions, 'moneyOut');
 
   const exceeds = (total: number, limit: number) => Math.round(total * 100) > Math.round(limit * 100);
 
@@ -602,8 +601,6 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
           onAdd={addTransaction}
           currency={formData.currency}
           openingBalance={formData.openingBalance}
-          remainingMoneyIn={remainingMoneyIn.toFixed(2)}
-          remainingMoneyOut={remainingMoneyOut.toFixed(2)}
           lastTransactionBalance={
             formData.transactions.length > 0
               ? formData.transactions[formData.transactions.length - 1].balance
