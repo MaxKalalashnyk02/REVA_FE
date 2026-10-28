@@ -30,24 +30,30 @@ function normalizeHeader(value: string): string {
 
 const MASKED_CARD = /^\d{4,6}[*xX•]{4,}\d{4}$/;
 
+function toValidDate(year: number, month: number, day: number): string {
+  const date = new Date(year, month - 1, day);
+  return date.getMonth() === month - 1 && date.getDate() === day ? formatDate(date) : '';
+}
+
 function toDateString(value: unknown): string {
   if (typeof value === 'number') {
     const parsed = XLSX.SSF.parse_date_code(value);
     return parsed ? formatDate(new Date(parsed.y, parsed.m - 1, parsed.d)) : '';
   }
-  const str = String(value ?? '').trim();
+  const str = String(value ?? '').trim().replace(/[ T]\d{1,2}:\d{2}(:\d{2})?.*$/, '');
   if (!str) return '';
 
   if (/^\d{1,2} [A-Za-z]{3} \d{4}$/.test(str)) return str;
 
-  const dmy = str.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/);
+  const dmy = str.match(/^(\d{1,2})[./-](\d{1,2})[./-](\d{4}|\d{2})\.?$/);
   if (dmy) {
-    return formatDate(new Date(Number(dmy[3]), Number(dmy[2]) - 1, Number(dmy[1])));
+    const year = Number(dmy[3]) < 100 ? 2000 + Number(dmy[3]) : Number(dmy[3]);
+    return toValidDate(year, Number(dmy[2]), Number(dmy[1]));
   }
 
-  const ymd = str.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  const ymd = str.match(/^(\d{4})[./-](\d{1,2})[./-](\d{1,2})\.?$/);
   if (ymd) {
-    return formatDate(new Date(Number(ymd[1]), Number(ymd[2]) - 1, Number(ymd[3])));
+    return toValidDate(Number(ymd[1]), Number(ymd[2]), Number(ymd[3]));
   }
 
   const parsed = new Date(str);
@@ -70,7 +76,8 @@ function toAmountString(value: unknown): string {
 }
 
 function rowToTransaction(row: Record<string, unknown>): Transaction | null {
-  if (Object.values(row).every(v => String(v ?? '').trim() === '')) return null;
+  const isBlank = (v: unknown) => String(v ?? '').trim() === '';
+  if ([row.description, row.from, row.moneyout, row.moneyin].every(isBlank)) return null;
 
   const from = String(row.from ?? '').trim();
   const description = String(row.description ?? '').trim();
@@ -178,7 +185,7 @@ export async function parseTransactionsFromExcel(file: File): Promise<Transactio
   const headers = grid[headerIndex].map(c => normalizeHeader(String(c)));
 
   const transactions: Transaction[] = [];
-  const rowsWithoutDate: number[] = [];
+  const dateErrors: string[] = [];
   for (let i = headerIndex + 1; i < grid.length; i++) {
     const row: Record<string, unknown> = {};
     headers.forEach((header, col) => {
@@ -186,17 +193,20 @@ export async function parseTransactionsFromExcel(file: File): Promise<Transactio
     });
     const transaction = rowToTransaction(row);
     if (!transaction) continue;
-    if (!transaction.date) rowsWithoutDate.push(firstRowNumber + i);
+    if (!transaction.date) {
+      const raw = String(row.date ?? '').trim();
+      dateErrors.push(`row ${firstRowNumber + i}: ${raw ? `"${raw}"` : 'empty'}`);
+    }
     transactions.push(transaction);
   }
 
   if (transactions.length === 0) {
     throw new Error('No transactions found. Make sure the file uses the template columns.');
   }
-  if (rowsWithoutDate.length > 0) {
+  if (dateErrors.length > 0) {
     throw new Error(
-      `Missing or unrecognized date in row(s) ${rowsWithoutDate.join(', ')}. ` +
-      'Fill in the Date column (e.g. 15.07.2026) and import again.'
+      `Missing or unrecognized date (${dateErrors.join('; ')}). ` +
+      'Use a date like 15.07.2026 in the Date column and import again.'
     );
   }
 
