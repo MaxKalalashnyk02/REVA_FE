@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
 import type { Transaction } from '../types';
-import { formatDate } from './date';
+import { formatDate, getTodayFormatted } from './date';
 import {
   INCOME_KINDS,
   buildIncomeDescription,
@@ -164,7 +164,9 @@ export function exportTransactionsToExcel(transactions: Transaction[]) {
   downloadWorkbook([[...HEADERS], ...rows], 'transactions.xlsx');
 }
 
-export async function parseTransactionsFromExcel(file: File): Promise<Transaction[]> {
+export async function parseTransactionsFromExcel(
+  file: File
+): Promise<{ transactions: Transaction[]; filledDates: string[] }> {
   const buffer = await file.arrayBuffer();
   const workbook = XLSX.read(buffer);
   const sheetName = workbook.SheetNames[0];
@@ -186,6 +188,7 @@ export async function parseTransactionsFromExcel(file: File): Promise<Transactio
 
   const transactions: Transaction[] = [];
   const dateErrors: string[] = [];
+  const emptyDates: { index: number; rowNumber: number }[] = [];
   for (let i = headerIndex + 1; i < grid.length; i++) {
     const row: Record<string, unknown> = {};
     headers.forEach((header, col) => {
@@ -195,7 +198,11 @@ export async function parseTransactionsFromExcel(file: File): Promise<Transactio
     if (!transaction) continue;
     if (!transaction.date) {
       const raw = String(row.date ?? '').trim();
-      dateErrors.push(`row ${firstRowNumber + i}: ${raw ? `"${raw}"` : 'empty'}`);
+      if (raw) {
+        dateErrors.push(`row ${firstRowNumber + i}: "${raw}"`);
+      } else {
+        emptyDates.push({ index: transactions.length, rowNumber: firstRowNumber + i });
+      }
     }
     transactions.push(transaction);
   }
@@ -205,10 +212,25 @@ export async function parseTransactionsFromExcel(file: File): Promise<Transactio
   }
   if (dateErrors.length > 0) {
     throw new Error(
-      `Missing or unrecognized date (${dateErrors.join('; ')}). ` +
+      `Unrecognized date (${dateErrors.join('; ')}). ` +
       'Use a date like 15.07.2026 in the Date column and import again.'
     );
   }
 
-  return transactions;
+  const filledDates = emptyDates.map(({ index, rowNumber }) => {
+    transactions[index].date = nearbyDate(transactions, index);
+    return `row ${rowNumber} → ${transactions[index].date}`;
+  });
+
+  return { transactions, filledDates };
+}
+
+function nearbyDate(transactions: Transaction[], index: number): string {
+  for (let i = index - 1; i >= 0; i--) {
+    if (transactions[i].date) return transactions[i].date;
+  }
+  for (let i = index + 1; i < transactions.length; i++) {
+    if (transactions[i].date) return transactions[i].date;
+  }
+  return getTodayFormatted();
 }

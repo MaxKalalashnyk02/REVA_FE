@@ -292,7 +292,7 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
 
   const processExcelFile = async (file: File) => {
     try {
-      const imported = await parseTransactionsFromExcel(file);
+      const { transactions: imported, filledDates } = await parseTransactionsFromExcel(file);
       const fileHasBalances = imported.every(t => t.balance !== '');
 
       let openingBalance = formData.openingBalance;
@@ -315,8 +315,15 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
         moneyOut: sumAmounts(updatedTransactions, 'moneyOut'),
       }));
 
+      const notes: string[] = [];
+      if (filledDates.length > 0) {
+        notes.push(`No date in the file, used the nearest row's date: ${filledDates.join('; ')}. Please check them.`);
+      }
       if (openingBalance.trim() === '') {
-        alert(`Imported ${imported.length} transactions. Fill in the opening balance and the balances will be recalculated.`);
+        notes.push('Fill in the opening balance and the balances will be recalculated.');
+      }
+      if (notes.length > 0) {
+        alert(`Imported ${imported.length} transactions.\n\n${notes.join('\n\n')}`);
       }
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Import error');
