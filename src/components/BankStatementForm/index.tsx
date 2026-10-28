@@ -323,7 +323,7 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
         notes.push('Fill in the opening balance and the balances will be recalculated.');
       }
       if (notes.length > 0) {
-        alert(`Imported ${imported.length} transactions.\n\n${notes.join('\n\n')}`);
+        setTimeout(() => alert(`Imported ${imported.length} transactions.\n\n${notes.join('\n\n')}`), 100);
       }
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Import error');
