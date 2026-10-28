@@ -8,6 +8,7 @@ import { saveStatementForCurrentUser, getDocumentById } from '../../api/document
 import { getTodayFormatted, formatDateLong, fromDbDate } from '../../utils/date';
 import { downloadTransactionsTemplate, parseTransactionsFromExcel, exportTransactionsToExcel } from '../../utils/excel';
 import { CARD_NUMBER_LENGTH, isValidCardNumber } from '../../utils/card';
+import { balanceBefore, sumAmounts, withRunningBalances } from '../../utils/balance';
 import type { FormData, Transaction } from '../../types';
 import { supabase } from '../../lib/supabase';
 
@@ -118,7 +119,16 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
       }
       return;
     }
-    
+
+    if (name === 'openingBalance') {
+      setFormData(prev => ({
+        ...prev,
+        openingBalance: value,
+        transactions: withRunningBalances(prev.transactions, value),
+      }));
+      return;
+    }
+
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
@@ -282,23 +292,32 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
 
   const processExcelFile = async (file: File) => {
     try {
-      const transactions = await parseTransactionsFromExcel(file);
-      const updatedTransactions = [...formData.transactions, ...transactions];
+      const imported = await parseTransactionsFromExcel(file);
+      const fileHasBalances = imported.every(t => t.balance !== '');
 
-      const limitError = getTransactionLimitError(updatedTransactions);
-      if (limitError) {
-        alert(limitError);
-        return;
+      let openingBalance = formData.openingBalance;
+      if (openingBalance.trim() === '' && formData.transactions.length === 0 && fileHasBalances) {
+        openingBalance = balanceBefore(imported[0]);
       }
+
+      const combined = [...formData.transactions, ...imported];
+      const updatedTransactions = fileHasBalances ? combined : withRunningBalances(combined, openingBalance);
 
       if (!periodStart || !periodEnd) {
         updatePeriodDatesFromTransactions(updatedTransactions);
       }
-      
+
       setFormData(prev => ({
         ...prev,
-        transactions: updatedTransactions
+        openingBalance,
+        transactions: updatedTransactions,
+        moneyIn: sumAmounts(updatedTransactions, 'moneyIn'),
+        moneyOut: sumAmounts(updatedTransactions, 'moneyOut'),
       }));
+
+      if (openingBalance.trim() === '') {
+        alert(`Imported ${imported.length} transactions. Fill in the opening balance and the balances will be recalculated.`);
+      }
     } catch (error) {
       alert(error instanceof Error ? error.message : 'Import error');
     }

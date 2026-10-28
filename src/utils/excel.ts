@@ -28,9 +28,12 @@ function normalizeHeader(value: string): string {
   return value.toLowerCase().replace(/[^a-z]/g, '');
 }
 
+const MASKED_CARD = /^\d{4,6}[*xX•]{4,}\d{4}$/;
+
 function toDateString(value: unknown): string {
-  if (value instanceof Date && !isNaN(value.getTime())) {
-    return formatDate(value);
+  if (typeof value === 'number') {
+    const parsed = XLSX.SSF.parse_date_code(value);
+    return parsed ? formatDate(new Date(parsed.y, parsed.m - 1, parsed.d)) : '';
   }
   const str = String(value ?? '').trim();
   if (!str) return '';
@@ -48,14 +51,70 @@ function toDateString(value: unknown): string {
   }
 
   const parsed = new Date(str);
-  return isNaN(parsed.getTime()) ? str : formatDate(parsed);
+  return isNaN(parsed.getTime()) ? '' : formatDate(parsed);
 }
 
 function toAmountString(value: unknown): string {
   if (value === null || value === undefined || value === '') return '';
-  if (typeof value === 'number') return value.toFixed(2);
-  const num = parseFloat(String(value).replace(/\s/g, '').replace(',', '.'));
-  return isNaN(num) ? '' : num.toFixed(2);
+  if (typeof value === 'number') return Math.abs(value).toFixed(2);
+  let text = String(value).replace(/[\s €$]/g, '');
+  if (text.includes(',') && text.includes('.')) {
+    text = text.lastIndexOf(',') > text.lastIndexOf('.')
+      ? text.replace(/\./g, '').replace(',', '.')
+      : text.replace(/,/g, '');
+  } else {
+    text = text.replace(',', '.');
+  }
+  const num = parseFloat(text);
+  return isNaN(num) ? '' : Math.abs(num).toFixed(2);
+}
+
+function rowToTransaction(row: Record<string, unknown>): Transaction | null {
+  if (Object.values(row).every(v => String(v ?? '').trim() === '')) return null;
+
+  const from = String(row.from ?? '').trim();
+  const description = String(row.description ?? '').trim();
+  let reference = String(row.reference ?? '').trim();
+  let recipient = String(row.recipient ?? '').replace(/\s/g, '');
+  if (!recipient && MASKED_CARD.test(reference.replace(/\s/g, ''))) {
+    recipient = reference.replace(/\s/g, '').replace(/[xX•]/g, '*');
+    reference = '';
+  }
+
+  const base: Transaction = {
+    date: toDateString(row.date),
+    description: description || from,
+    moneyOut: toAmountString(row.moneyout),
+    moneyIn: toAmountString(row.moneyin),
+    balance: toAmountString(row.balance),
+    reference,
+    recipient,
+    type: 'expense'
+  };
+
+  const kind = parseTypeColumn(row.type);
+  if (kind) {
+    return {
+      ...base,
+      type: 'income',
+      incomeKind: kind.value,
+      counterparty: from,
+      description: description || buildIncomeDescription(kind.value, from),
+      recipient: '',
+    };
+  }
+  const inferred = inferIncomeFromDescription(base.description);
+  if (inferred) return { ...base, ...inferred };
+  if (base.moneyIn && !base.moneyOut) {
+    return {
+      ...base,
+      type: 'income',
+      incomeKind: INCOME_KINDS[0].value,
+      counterparty: from || base.description,
+      recipient: '',
+    };
+  }
+  return base;
 }
 
 function toNumberOrEmpty(value: string): number | string {
@@ -100,53 +159,45 @@ export function exportTransactionsToExcel(transactions: Transaction[]) {
 
 export async function parseTransactionsFromExcel(file: File): Promise<Transaction[]> {
   const buffer = await file.arrayBuffer();
-  const workbook = XLSX.read(buffer, { cellDates: true });
+  const workbook = XLSX.read(buffer);
   const sheetName = workbook.SheetNames[0];
   if (!sheetName) {
     throw new Error('The Excel file contains no sheets');
   }
 
-  const rawRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(workbook.Sheets[sheetName], {
-    defval: ''
-  });
+  const sheet = workbook.Sheets[sheetName];
+  const grid = XLSX.utils.sheet_to_json<unknown[]>(sheet, { header: 1, defval: '', blankrows: true });
+  const firstRowNumber = XLSX.utils.decode_range(sheet['!ref'] ?? 'A1').s.r + 1;
 
-  const transactions = rawRows
-    .map(raw => {
-      const row: Record<string, unknown> = {};
-      for (const [key, value] of Object.entries(raw)) {
-        row[normalizeHeader(key)] = value;
-      }
-      const base: Transaction = {
-        date: toDateString(row.date),
-        description: String(row.description ?? '').trim(),
-        moneyOut: toAmountString(row.moneyout),
-        moneyIn: toAmountString(row.moneyin),
-        balance: toAmountString(row.balance),
-        reference: String(row.reference ?? '').trim(),
-        recipient: String(row.recipient ?? '').replace(/\s/g, ''),
-        type: 'expense'
-      };
+  const headerIndex = grid.findIndex(cells =>
+    cells.some(c => ['description', 'moneyout', 'moneyin'].includes(normalizeHeader(String(c))))
+  );
+  if (headerIndex === -1) {
+    throw new Error('No header row found. The file needs Description, Money Out and Money In columns.');
+  }
+  const headers = grid[headerIndex].map(c => normalizeHeader(String(c)));
 
-      const kind = parseTypeColumn(row.type);
-      const from = String(row.from ?? '').trim();
-      if (kind) {
-        return {
-          ...base,
-          type: 'income' as const,
-          incomeKind: kind.value,
-          counterparty: from,
-          description: base.description || buildIncomeDescription(kind.value, from),
-          reference: '',
-          recipient: '',
-        };
-      }
-      const inferred = inferIncomeFromDescription(base.description);
-      return inferred ? { ...base, ...inferred } : base;
-    })
-    .filter(t => t.date || t.description);
+  const transactions: Transaction[] = [];
+  const rowsWithoutDate: number[] = [];
+  for (let i = headerIndex + 1; i < grid.length; i++) {
+    const row: Record<string, unknown> = {};
+    headers.forEach((header, col) => {
+      if (header) row[header] = grid[i][col];
+    });
+    const transaction = rowToTransaction(row);
+    if (!transaction) continue;
+    if (!transaction.date) rowsWithoutDate.push(firstRowNumber + i);
+    transactions.push(transaction);
+  }
 
   if (transactions.length === 0) {
     throw new Error('No transactions found. Make sure the file uses the template columns.');
+  }
+  if (rowsWithoutDate.length > 0) {
+    throw new Error(
+      `Missing or unrecognized date in row(s) ${rowsWithoutDate.join(', ')}. ` +
+      'Fill in the Date column (e.g. 15.07.2026) and import again.'
+    );
   }
 
   return transactions;
