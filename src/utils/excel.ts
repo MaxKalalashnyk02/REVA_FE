@@ -141,7 +141,7 @@ export function downloadTransactionsTemplate() {
   downloadWorkbook(
     [
       [...HEADERS],
-      [formatDate(new Date()), 'Expense', '', 'Example payment', 25.5, '', '', 'REF123', ''],
+      [formatDate(new Date()), 'Expense', '', 'Lidl', 25.5, '', '', 'Lidl Cy 123, Agios Athanas', '535456******4320'],
       [formatDate(new Date()), 'Transfer from', 'JOHN SMITH', '', '', 100, '', '', ''],
       [formatDate(new Date()), 'Payment from', 'ACME LTD', '', '', 250, '', '', '']
     ],
