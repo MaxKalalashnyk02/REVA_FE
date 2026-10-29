@@ -7,7 +7,7 @@ import {
   inferIncomeFromDescription,
 } from '../components/BankStatementForm/constants';
 
-const HEADERS = ['Date', 'Type', 'From', 'Description', 'Money Out', 'Money In', 'Balance', 'Reference', 'Recipient'] as const;
+const HEADERS = ['Date', 'Type', 'From', 'Description', 'Money Out', 'Money In', 'Balance', 'To', 'Card'] as const;
 
 const COLUMN_WIDTHS = [
   { wch: 14 }, { wch: 16 }, { wch: 20 }, { wch: 40 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 20 }, { wch: 20 },
@@ -81,8 +81,8 @@ function rowToTransaction(row: Record<string, unknown>): Transaction | null {
 
   const from = String(row.from ?? '').trim();
   const description = String(row.description ?? '').trim();
-  let reference = String(row.reference ?? '').trim();
-  let recipient = String(row.recipient ?? '').replace(/\s/g, '');
+  let reference = String(row.to || row.reference || '').trim();
+  let recipient = String(row.card || row.recipient || '').replace(/\s/g, '');
   if (!recipient && MASKED_CARD.test(reference.replace(/\s/g, ''))) {
     recipient = reference.replace(/\s/g, '').replace(/[xX•]/g, '*');
     reference = '';

@@ -61,7 +61,7 @@ export function TransactionList({
                   {INCOME_KINDS.find(k => k.value === tx.incomeKind)?.label ?? 'Income'}
                 </span>
                 {tx.counterparty && <div>From: {tx.counterparty}</div>}
-                {tx.reference && <div>Reference: {tx.reference}</div>}
+                {tx.reference && <div>To: {tx.reference}</div>}
               </div>
             ) : (tx.reference || tx.recipient) && (
               <div className="text-xs text-slate-500 mt-0.5 leading-snug">
