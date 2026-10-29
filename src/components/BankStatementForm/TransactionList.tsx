@@ -1,6 +1,5 @@
 import type { Transaction } from '../../types';
 import { Button } from '../ui';
-import { INCOME_KINDS } from './constants';
 
 interface TransactionListProps {
   transactions: Transaction[];
@@ -55,15 +54,7 @@ export function TransactionList({
           </div>
           <div className="md:col-span-2">
             <div className="text-slate-300 text-sm">{tx.description}</div>
-            {tx.type === 'income' ? (
-              <div className="text-xs text-slate-500 mt-0.5 leading-snug">
-                <span className="text-emerald-500">
-                  {INCOME_KINDS.find(k => k.value === tx.incomeKind)?.label ?? 'Income'}
-                </span>
-                {tx.counterparty && <div>From: {tx.counterparty}</div>}
-                {tx.reference && <div>To: {tx.reference}</div>}
-              </div>
-            ) : (tx.reference || tx.recipient) && (
+            {(tx.reference || tx.recipient) && (
               <div className="text-xs text-slate-500 mt-0.5 leading-snug">
                 {tx.reference && <div>To: {tx.reference}</div>}
                 {tx.recipient && <div>Card: {tx.recipient}</div>}
