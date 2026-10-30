@@ -52,6 +52,7 @@ export function AddTransactionForm({
       moneyOut: '',
       reference: '',
       recipient: '',
+      paymentReference: '',
       counterparty: '',
       description: isIncome && isAutoDescription(transaction) ? '' : transaction.description,
     });
@@ -121,35 +122,41 @@ export function AddTransactionForm({
               onChange={e => updateIncome({ counterparty: e.target.value })}
               placeholder={PLACEHOLDERS.transactionCounterparty}
             />
+            <InputSmall
+              label="Reference:"
+              name="paymentReference"
+              value={transaction.paymentReference ?? ''}
+              onChange={handleChange}
+              placeholder={PLACEHOLDERS.transactionPaymentReference}
+            />
           </>
         ) : (
-          <>
-            <InputSmall
-              label="To:"
-              name="reference"
-              value={transaction.reference ?? ''}
-              onChange={handleChange}
-              placeholder={PLACEHOLDERS.transactionReference}
-            />
-            <div>
-              <InputSmall
-                label="Card:"
-                name="recipient"
-                inputMode="numeric"
-                maxLength={CARD_NUMBER_LENGTH}
-                value={transaction.recipient ?? ''}
-                onChange={handleCardChange}
-                placeholder={PLACEHOLDERS.transactionRecipient}
-                className={cardInvalid ? 'border-red-500' : ''}
-              />
-              {cardInvalid && (
-                <p className="text-red-400 text-xs mt-1">
-                  {cardNumber.length}/{CARD_NUMBER_LENGTH} digits
-                </p>
-              )}
-            </div>
-          </>
+          <InputSmall
+            label="To:"
+            name="reference"
+            value={transaction.reference ?? ''}
+            onChange={handleChange}
+            placeholder={PLACEHOLDERS.transactionReference}
+          />
         )}
+
+        <div>
+          <InputSmall
+            label="Card:"
+            name="recipient"
+            inputMode="numeric"
+            maxLength={CARD_NUMBER_LENGTH}
+            value={transaction.recipient ?? ''}
+            onChange={handleCardChange}
+            placeholder={PLACEHOLDERS.transactionRecipient}
+            className={cardInvalid ? 'border-red-500' : ''}
+          />
+          {cardInvalid && (
+            <p className="text-red-400 text-xs mt-1">
+              {cardNumber.length}/{CARD_NUMBER_LENGTH} digits
+            </p>
+          )}
+        </div>
 
         <div className="col-span-2 lg:col-span-2">
           <InputSmall

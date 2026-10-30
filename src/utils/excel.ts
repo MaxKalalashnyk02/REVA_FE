@@ -7,10 +7,10 @@ import {
   inferIncomeFromDescription,
 } from '../components/BankStatementForm/constants';
 
-const HEADERS = ['Date', 'Type', 'From', 'Description', 'Money Out', 'Money In', 'Balance', 'To', 'Card'] as const;
+const HEADERS = ['Date', 'Type', 'From', 'Description', 'Money Out', 'Money In', 'Balance', 'To', 'Card', 'Reference'] as const;
 
 const COLUMN_WIDTHS = [
-  { wch: 14 }, { wch: 16 }, { wch: 20 }, { wch: 40 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 20 }, { wch: 20 },
+  { wch: 14 }, { wch: 16 }, { wch: 20 }, { wch: 40 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 30 }, { wch: 20 }, { wch: 20 },
 ];
 
 function typeLabel(t: Transaction): string {
@@ -81,11 +81,18 @@ function rowToTransaction(row: Record<string, unknown>): Transaction | null {
 
   const from = String(row.from ?? '').trim();
   const description = String(row.description ?? '').trim();
-  let reference = String(row.to || row.reference || '').trim();
+  let reference = String(row.to ?? '').trim();
+  let paymentReference = String(row.reference ?? '').trim();
   let recipient = String(row.card || row.recipient || '').replace(/\s/g, '');
-  if (!recipient && MASKED_CARD.test(reference.replace(/\s/g, ''))) {
-    recipient = reference.replace(/\s/g, '').replace(/[xX•]/g, '*');
+  const asCard = (value: string) =>
+    MASKED_CARD.test(value.replace(/\s/g, '')) ? value.replace(/\s/g, '').replace(/[xX•]/g, '*') : '';
+  if (!recipient && asCard(reference)) {
+    recipient = asCard(reference);
     reference = '';
+  }
+  if (!recipient && asCard(paymentReference)) {
+    recipient = asCard(paymentReference);
+    paymentReference = '';
   }
 
   const base: Transaction = {
@@ -96,6 +103,7 @@ function rowToTransaction(row: Record<string, unknown>): Transaction | null {
     balance: toAmountString(row.balance),
     reference,
     recipient,
+    paymentReference,
     type: 'expense'
   };
 
@@ -141,9 +149,10 @@ export function downloadTransactionsTemplate() {
   downloadWorkbook(
     [
       [...HEADERS],
-      [formatDate(new Date()), 'Expense', '', 'Lidl', 25.5, '', '', 'Lidl Cy 123, Agios Athanas', '535456******4320'],
-      [formatDate(new Date()), 'Transfer from', 'JOHN SMITH', '', '', 100, '', '', ''],
-      [formatDate(new Date()), 'Payment from', 'ACME LTD', '', '', 250, '', '', '']
+      [formatDate(new Date()), 'Expense', '', 'Lidl', 25.5, '', '', 'Lidl Cy 123, Agios Athanas', '535456******4320', ''],
+      [formatDate(new Date()), 'Expense', '', 'Telia', 130.68, '', '', 'TELIA LIETUVA AB', '', 'Invoice 60956905'],
+      [formatDate(new Date()), 'Transfer from', 'JOHN SMITH', '', '', 100, '', '', '', 'Salary July'],
+      [formatDate(new Date()), 'Payment from', 'ACME LTD', '', '', 250, '', '', '', '']
     ],
     'transactions_template.xlsx'
   );
@@ -159,7 +168,8 @@ export function exportTransactionsToExcel(transactions: Transaction[]) {
     toNumberOrEmpty(t.moneyIn),
     toNumberOrEmpty(t.balance),
     t.reference ?? '',
-    t.recipient ?? ''
+    t.recipient ?? '',
+    t.paymentReference ?? ''
   ]);
   downloadWorkbook([[...HEADERS], ...rows], 'transactions.xlsx');
 }

@@ -53,6 +53,7 @@ export const INITIAL_TRANSACTION: Transaction = {
   balance: '',
   reference: '',
   recipient: '',
+  paymentReference: '',
   type: 'expense',
   incomeKind: 'transfer_from',
   counterparty: ''
@@ -78,5 +79,6 @@ export const PLACEHOLDERS = {
   transactionBalance: '67338.64',
   transactionReference: 'To Maria N',
   transactionRecipient: '1234567890123456',
+  transactionPaymentReference: 'Invoice 2026-001',
   transactionCounterparty: 'JOHN SMITH',
 };

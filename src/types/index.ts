@@ -10,6 +10,7 @@ export interface Transaction {
   balance: string;
   reference?: string;
   recipient?: string;
+  paymentReference?: string;
   type?: TransactionType;
   incomeKind?: IncomeKind;
   counterparty?: string;

@@ -132,6 +132,7 @@ export async function saveStatementForCurrentUser(
       balance: parseNumber(tx.balance) ?? 0,
       reference: tx.reference || null,
       recipient: tx.recipient ? maskCardNumber(tx.recipient) : null,
+      payment_reference: tx.paymentReference || null,
     }));
 
   if (!txPayload.length) return documentId;
