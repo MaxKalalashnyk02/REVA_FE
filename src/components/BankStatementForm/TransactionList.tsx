@@ -54,11 +54,16 @@ export function TransactionList({
           </div>
           <div className="md:col-span-2">
             <div className="text-slate-300 text-sm">{tx.description}</div>
-            {(tx.reference || tx.recipient || tx.paymentReference) && (
+            {tx.type === 'income' ? (
+              (tx.counterparty || tx.paymentReference) && (
+                <div className="text-xs text-slate-500 mt-0.5 leading-snug">
+                  {tx.counterparty && <div>From: {tx.counterparty}</div>}
+                  {tx.paymentReference && <div>Reference: {tx.paymentReference}</div>}
+                </div>
+              )
+            ) : (tx.reference || tx.recipient) && (
               <div className="text-xs text-slate-500 mt-0.5 leading-snug">
-                {tx.reference
-                  ? <div>To: {tx.reference}</div>
-                  : tx.paymentReference && <div>Reference: {tx.paymentReference}</div>}
+                {tx.reference && <div>To: {tx.reference}</div>}
                 {tx.recipient && <div>Card: {tx.recipient}</div>}
               </div>
             )}

@@ -123,17 +123,21 @@ export async function saveStatementForCurrentUser(
 
   const txPayload = formData.transactions
     .filter(tx => tx.description || tx.date)
-    .map(tx => ({
-      document_id: documentId,
-      date: parseDateForDb(tx.date) ?? toDbDate(new Date()),
-      description: tx.description,
-      money_out: parseNumber(tx.moneyOut),
-      money_in: parseNumber(tx.moneyIn),
-      balance: parseNumber(tx.balance) ?? 0,
-      reference: tx.reference || null,
-      recipient: tx.recipient ? maskCardNumber(tx.recipient) : null,
-      payment_reference: tx.paymentReference || null,
-    }));
+    .map(tx => {
+      const isIncome = tx.type === 'income';
+      return {
+        document_id: documentId,
+        date: parseDateForDb(tx.date) ?? toDbDate(new Date()),
+        description: tx.description,
+        money_out: parseNumber(tx.moneyOut),
+        money_in: parseNumber(tx.moneyIn),
+        balance: parseNumber(tx.balance) ?? 0,
+        reference: (!isIncome && tx.reference?.trim()) || null,
+        recipient: !isIncome && tx.recipient ? maskCardNumber(tx.recipient) : null,
+        counterparty: (isIncome && tx.counterparty?.trim()) || null,
+        payment_reference: (isIncome && tx.paymentReference?.trim()) || null,
+      };
+    });
 
   if (!txPayload.length) return documentId;
 

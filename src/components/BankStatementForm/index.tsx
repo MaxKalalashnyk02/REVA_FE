@@ -89,6 +89,8 @@ export default function BankStatementForm({ documentId }: BankStatementFormProps
           recipient: t.recipient || '',
           paymentReference: t.payment_reference || '',
           ...(inferIncomeFromDescription(t.description || '') ?? { type: 'expense' as const }),
+          ...(t.money_in && !t.money_out ? { type: 'income' as const } : {}),
+          ...(t.counterparty ? { counterparty: t.counterparty } : {}),
         })),
       });
 
